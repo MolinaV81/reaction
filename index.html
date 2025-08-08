@@ -1,0 +1,2716 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Línea de Tiempo Interactiva - Colaboradores</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .timeline-line {
+            background: linear-gradient(to bottom, #0033A0, #D50032);
+        }
+        .employee-card {
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        .employee-card.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .modal-backdrop {
+            backdrop-filter: blur(8px);
+        }
+        .timeline-dot {
+            box-shadow: 0 0 0 4px rgba(0, 51, 160, 0.3);
+        }
+        .timeline-dot:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 6px rgba(0, 51, 160, 0.4);
+        }
+    </style>
+</head>
+<body class="bg-white min-h-screen">
+    <!-- Header -->
+    <div style="background: linear-gradient(to right, #0033A0, #D50032);" class="border-b border-blue-300 sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-6 py-4">
+            <div class="flex items-center justify-start space-x-6">
+                <!-- Universidad de Londres Logo -->
+                <div class="w-32 h-32 bg-white rounded-full flex items-center justify-center p-1">
+                    <img src="https://i.postimg.cc/MH7QXS4j/45-aniv-Mesa-de-trabajo-1.png" alt="Universidad de Londres" class="w-full h-full object-contain">
+                </div>
+                <div class="text-left">
+                    <h1 class="text-3xl font-bold text-white">
+                        Universidad de Londres
+                    </h1>
+                    <p class="text-lg text-white/90">Línea de Tiempo de Colaboradores</p>
+                </div>
+            </div>
+            <p class="text-white/80 text-left mt-2 ml-6">Haz clic en cualquier nombre para ver más detalles</p>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="max-w-7xl mx-auto px-6 py-6">
+        <div class="flex flex-wrap gap-4 justify-center mb-8">
+            <input type="text" id="searchInput" placeholder="Buscar colaborador..." 
+                   class="px-4 py-2 rounded-lg bg-white border border-gray-300 text-black placeholder-gray-500 focus:outline-none focus:ring-2" style="focus:ring-color: #0033A0;">
+            <select id="yearFilter" class="px-4 py-2 rounded-lg bg-white border border-gray-300 text-black focus:outline-none focus:ring-2" style="focus:ring-color: #0033A0;">
+                <option value="">Todos los años</option>
+            </select>
+            <select id="departmentFilter" class="px-3 py-2 rounded-lg bg-white border border-gray-300 text-black focus:outline-none focus:ring-2" style="focus:ring-color: #0033A0;">
+                <option value="">Todos los departamentos</option>
+            </select>
+        </div>
+
+        <!-- Timeline Container -->
+        <div class="relative max-w-4xl mx-auto">
+            <!-- Vertical Timeline Line -->
+            <div class="absolute left-1/2 transform -translate-x-1/2 w-2 timeline-line h-full rounded-full"></div>
+            
+            <!-- Timeline Content -->
+            <div id="timelineContainer" class="relative">
+                <!-- Timeline items will be generated here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="employeeModal" class="fixed inset-0 z-50 hidden">
+        <div class="modal-backdrop absolute inset-0 bg-black/50" onclick="closeModal()"></div>
+        <div class="relative z-10 flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div id="modalContent">
+                    <!-- Modal content will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Real employee data
+        const employees = [
+            {
+                id: 1,
+                name: "RIOS CRUZ MARTHA PATRICIA",
+                department: "ATRACCION Y CONTRATACION",
+                position: "EJECUTIVO DE ATRACCION Y CONTRATACION",
+                startDate: new Date(2011, 9, 6),
+                avatar: "https://ui-avatars.com/api/?name=Martha+Patricia+Rios+Cruz&background=0033A0&color=fff&size=200",
+                joinStory: "Mi ingreso fue el 6 de Octubre de 2011\n\nLa primera foto es de la primera fiesta de fin de año del 2011, estaba muy emocionada y contenta de haber ingresado a la Universidad, aún no conocía a muchas personas, pero mi equipo de trabajo siempre me hizo sentir bienvenida!\n\nLa segunda es del concierto que dio Molotov en Vertiz, noviembre del 2012! Gritamos, cantamos y saltamos, fue una experiencia única! Gracias UDLondres!",
+                photos: [
+                    "https://i.postimg.cc/YqbP1GQw/IMG-1974.jpg",
+                    "https://i.postimg.cc/QxXP9k9b/IMG-2006.jpg",
+                    "https://i.postimg.cc/XNKmYDJq/IMG-2007.jpg"
+                ]
+            },
+            {
+                id: 2,
+                name: "SANDOVAL MIGUEL ROCIO",
+                department: "ATRACCION Y CONTRATACION",
+                position: "EJECUTIVO DE ATRACCION Y CONTRATACION",
+                startDate: new Date(2018, 4, 8),
+                avatar: "https://ui-avatars.com/api/?name=Rocio+Sandoval+Miguel&background=D50032&color=fff&size=200",
+                joinStory: "Vivir la aventura de formar parte de esta gran institución ha sido algo maravilloso, nunca voy a olvidar mi primer dia aquí, llegue prácticamente con el corazón roto y con muchos sueños que nunca pensé poder lograr, hoy después de ese primer dia solo puedo dar gracias por todo lo que me has dado mi querida universidad de Londres, porque la familia que aquí encontré nunca soltó mi mano, infinitas gracias por todo lo que he podido lograr en estos 7 años y por las cosas maravillosas que me esperan, gracias por cobijarme y cobijar a mi pequeña María con todos su amor, gracias porque puedo llegar a mi trabajo y sentir que llego a casa con mi familia. Gracias mi querida UDL",
+                photos: [
+                    "https://i.postimg.cc/TPmQHp51/CHIO-1.jpg",
+                    "https://i.postimg.cc/pLmsz02D/CHIO-2.jpg",
+                    "https://i.postimg.cc/WbW9DRPN/CHIO-3.jpg",
+                    "https://i.postimg.cc/ZKK7Kb2s/CHIO-4.jpg",
+                    "https://i.postimg.cc/rw7QJSm7/CHIO-5.jpg"
+                ]
+            },
+            {
+                id: 3,
+                name: "TAPIA GOMEZ FERNANDO ISRAEL",
+                department: "ATRACCION Y CONTRATACION",
+                position: "RESPONSABLE DE ATRACCION DE TALENTO EMPRESARIAL",
+                startDate: new Date(2018, 8, 11),
+                avatar: "https://ui-avatars.com/api/?name=Fernando+Israel+Tapia+Gomez&background=0033A0&color=fff&size=200",
+                joinStory: "Mi anécdota fue que cuando entre me toco pura fiesta y comidas del área y dije de aquí soy y aquí seguimos.",
+                photos: [
+                    "https://i.postimg.cc/Bb5gZyB0/fernando-tapia.jpg"
+                ]
+            },
+            {
+                id: 4,
+                name: "GUILLEN CORONADO ANA ELENA",
+                department: "ATRACCION Y CONTRATACION",
+                position: "JEFE",
+                startDate: new Date(2023, 6, 17),
+                avatar: "https://ui-avatars.com/api/?name=Ana+Elena+Guillen+Coronado&background=D50032&color=fff&size=200",
+                joinStory: "Corría el año 2009, yo tenía 23 años, cuando recibí una llamada de la Universidad de Londres para una entrevista. No tenía idea de la hermosa sorpresa que la vida me tenía reservada. Aquel día, al cruzar por primera vez las puertas del plantel Luis Cabrera, quedé maravillada por la belleza de su estructura. Lo que nunca imaginé es que, años después, este lugar se convertiría en mi segunda casa.\n\nGracias, UDL, por tantos aprendizajes, por impulsarme a crecer, por regalarme vivencias inolvidables y amistades entrañables. Gracias por permitirme dedicar tiempo a mis hijos y, al mismo tiempo, retomar mi desarrollo profesional.\n\n¡Feliz Aniversario! Que vengan muchísimos años más de historia y orgullo.",
+                photos: [
+                    "https://i.postimg.cc/NGTY740v/UDL.jpg",
+                    "https://i.postimg.cc/KYHFQpLx/UDL2.jpg",
+                    "https://i.postimg.cc/HnQgYpNk/UDL3.jpg",
+                    "https://i.postimg.cc/SR04bXDP/UDL4.jpg",
+                    "https://i.postimg.cc/tTnbcdtP/UDL5.jpg",
+                    "https://i.postimg.cc/pdTRfMms/UDL6.jpg",
+                    "https://i.postimg.cc/L6pSy1qY/UDL9.jpg"
+                ]
+            },
+            {
+                id: 5,
+                name: "MORALES MAYA MARCO ANTONIO",
+                department: "CENTRO DE IDIOMAS",
+                position: "DIRECTOR",
+                startDate: new Date(1994, 8, 1),
+                avatar: "https://ui-avatars.com/api/?name=Marco+Antonio+Morales+Maya&background=0033A0&color=fff&size=200",
+                joinStory: "En estas fotografías aparezco en una ceremonia de reconocimiento al mejor profesor, mas o menos por 1995 o 96. La directora del centro de Idiomas en ese entonces era Dinorah Aller, quien por cierto me enteré que me quería despedir porque me fui a un congreso de profesores en Cuernavaca sin su permiso, ya que no estaba en la oficina en ese momento y me autorizó Genaro Zarza, coordinador.\n\nSe había hecho una rifa para pagar inscripción y viáticos a un profesor de la planta de entonces al congreso. Ganó la rifa una maestra, pero yo decidí ir pagando mis gastos, ya que el ponente en el congreso era uno de mis gurús en psicolingüística que estaba en México y era un evento imperdible. Ella se enojó mucho y habló con Ernesto Molina, director administrativo de ese entonces, para decirle que me quería correr. Pero Ernesto, más mesurado y leyendo entre líneas lo que había detrás de ese exabrupto asesino, y la calmó un poco.\n\nAl regresar y retomar mis clases ella, ya sin la posesión demoníaca previa, habló conmigo muy calmadamente y sin rastros de la ira que me platicaron había hecho patente a todo mundo por no respetar su \"autoridad.\"\n\nPoco tiempo después ella SÍ fue despedida por múltiples conflictos que tenía con todo el mundo, al parecer",
+                photos: [
+                    "https://i.postimg.cc/CLhhh8Fy/Whats-App-Image-2025-08-06-at-9-31-00-AM.jpg",
+                    "https://i.postimg.cc/YqdphS9v/Whats-App-Image-2025-08-06-at-9-31-00-AM-1.jpg",
+                    "https://i.postimg.cc/W1tsrPFX/Whats-App-Image-2025-08-06-at-9-31-00-AM-1-2.jpg",
+                    "https://i.postimg.cc/t4fpNmFy/Whats-App-Image-2025-08-06-at-9-31-00-AM-2.jpg"
+                ]
+            },
+            {
+                id: 6,
+                name: "MOTA RANGEL IVONNE LIZBETH",
+                department: "CENTRO DE IDIOMAS",
+                position: "ASISTENTE",
+                startDate: new Date(2013, 0, 7),
+                avatar: "https://ui-avatars.com/api/?name=Ivonne+Lizbeth+Mota+Rangel&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 7,
+                name: "GARCIA HERNANDEZ ALEJANDRA",
+                department: "CENTRO DE IDIOMAS",
+                position: "COORDINADOR DE SERVICIOS ESCOLARES",
+                startDate: new Date(2018, 4, 17),
+                avatar: "https://ui-avatars.com/api/?name=Alejandra+Garcia+Hernandez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 8,
+                name: "MORA RAMIREZ ELVIRA PAOLA",
+                department: "CERTIFICACIONES",
+                position: "COORDINADOR",
+                startDate: new Date(2013, 6, 10),
+                avatar: "https://ui-avatars.com/api/?name=Elvira+Paola+Mora+Ramirez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 9,
+                name: "REYES LOPEZ SUSANA",
+                department: "CERTIFICACIONES",
+                position: "EJECUTIVO DE PROMOCION",
+                startDate: new Date(2024, 8, 25),
+                avatar: "https://ui-avatars.com/api/?name=Susana+Reyes+Lopez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 10,
+                name: "QUIROZ BELECHE JORGE FRANCISCO",
+                department: "CERTIFICACIONES",
+                position: "EJECUTIVO DE PROMOCION",
+                startDate: new Date(2025, 3, 22),
+                avatar: "https://ui-avatars.com/api/?name=Jorge+Francisco+Quiroz+Beleche&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 11,
+                name: "RAMIREZ FLORES OSCAR EDUARDO",
+                department: "COBRANZAS",
+                position: "JEFE",
+                startDate: new Date(2008, 7, 11),
+                avatar: "https://ui-avatars.com/api/?name=Oscar+Eduardo+Ramirez+Flores&background=0033A0&color=fff&size=200",
+                joinStory: "Comencé a trabajar en la Universidad de Londres un 11 de Agosto del año 2008, no conocía esta universidad, había ingresado mi curriculum en varias plataformas para buscar empleo, en realidad era de mis primeros trabajos, anteriormente había trabajado para P&G en la línea de producción de detergente pero no era lo mío, posteriormente ingrese a UTEP en este lugar trabaje como gestor de cobranza aunque la verdad ahí no la pase muy bien, yo quería trabajar desde pequeño en alguna oficina pero jamás imagine que trabajar en la UDL se convertiría en mi sueño hecho realidad, inicie como analista de Cobranzas, al año de ingresar a laborar logre casarme con el amor de mi vida, en el año 2011 nació mi primer hija Melani, en Octubre 2016 subí a supervisor, en el año 2017 nació mi segunda hija Natalia, en julio 2020 me nombraron Jefe de Cobranzas. La UDL ha sido una de mis herramientas para llegar a lograr mis metas y convertir mis sueños en realidad. Voy por más retos en mi vida personal y laboral dentro de la Universidad de Londres.",
+                photos: [
+                    "https://i.postimg.cc/zXKmKX0z/Whats-App-Image-2025-08-06-at-9-27-11-AM.jpg"
+                ]
+            },
+            {
+                id: 12,
+                name: "SARABIA CORTES MARIA MARGARITA",
+                department: "COBRANZAS",
+                position: "RESPONSABLE DE COBRANZAS",
+                startDate: new Date(2011, 7, 22),
+                avatar: "https://ui-avatars.com/api/?name=Maria+Margarita+Sarabia+Cortes&background=D50032&color=fff&size=200",
+                joinStory: "Mi historia en esta gran institución comenzó el 22 de agosto de 2011, cuando ingresé a laborar como auxiliar de cobranza en el turno vespertino. Poco tiempo después, me propusieron quedarme como responsable de Cobranzas, un reto que asumí con compromiso y entusiasmo, desde ese momento, he permanecido firme en esta área que tanto me ha formado y desafiado.\n\nPero mi vínculo con la Universidad de Londres va más allá de lo profesional. A veces, la vida guarda coincidencias especiales: en el año 1992, visité el plantel Vertíz para asistir al festival del 10 de mayo, ya que mi hija estudiaba aquí la primaria. Años más tarde, en el 2020, me emociona mucho: estoy nuevamente con mi hija en este mismo plantel, pero ahora como egresada de la Licenciatura en Administración, y ella, como alumna de posgrado.\n\nHoy puedo decir con gratitud y orgullo que soy colaboradora y también exalumna de esta gran institución. La Universidad de Londres no solo ha sido parte de mi crecimiento profesional, sino también de mi vida familiar y académica. Aquí he aprendido, crecido y formado parte de una comunidad que me inspira a seguir dando lo mejor.\n\n\"La Universidad de Londres no solo me dio un empleo y una formación, sino un lugar al que siempre puedo llamar hogar.\"",
+                photos: [
+                    "https://i.postimg.cc/J7ZMQzYY/margarita-saravia-topaz-face-upscale-4x.jpg"
+                ]
+            },
+            {
+                id: 13,
+                name: "MEJIA LEDON NORMA IRELY",
+                department: "COBRANZAS",
+                position: "ANALISTA",
+                startDate: new Date(2013, 0, 28),
+                avatar: "https://ui-avatars.com/api/?name=Norma+Irely+Mejia+Ledon&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 14,
+                name: "ROSAS HERNANDEZ VIRGINIA BERENICE",
+                department: "COBRANZAS",
+                position: "ANALISTA",
+                startDate: new Date(2018, 8, 6),
+                avatar: "https://ui-avatars.com/api/?name=Virginia+Berenice+Rosas+Hernandez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 15,
+                name: "RAMIREZ TORRES ROLANDO",
+                department: "COORD. ADMVA. GASTRONOMIA",
+                position: "RESPONSABLE DE ALMACEN",
+                startDate: new Date(2000, 5, 1),
+                avatar: "https://ui-avatars.com/api/?name=Rolando+Ramirez+Torres&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 16,
+                name: "HERNANDEZ VALDEZ JESUS ALBERTO",
+                department: "COORD. ADMVA. GASTRONOMIA",
+                position: "AUXILIAR DE ALMACEN",
+                startDate: new Date(2007, 7, 20),
+                avatar: "https://ui-avatars.com/api/?name=Jesus+Alberto+Hernandez+Valdez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 17,
+                name: "CHING ISASI MARTHA OBDULIA",
+                department: "COORD. ADMVA. GASTRONOMIA",
+                position: "COORDINADOR",
+                startDate: new Date(2008, 8, 17),
+                avatar: "https://ui-avatars.com/api/?name=Martha+Obdulia+Ching+Isasi&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 18,
+                name: "VALDES GOMEZ MARIO",
+                department: "COORD. ADMVA. GASTRONOMIA",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2008, 10, 26),
+                avatar: "https://ui-avatars.com/api/?name=Mario+Valdes+Gomez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 19,
+                name: "YAÑEZ ARELLANO MIGUEL ANGEL",
+                department: "COORD. ADMVA. GASTRONOMIA",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2011, 4, 2),
+                avatar: "https://ui-avatars.com/api/?name=Miguel+Angel+Yañez+Arellano&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 20,
+                name: "LOPEZ ALVAREZ JULIETA",
+                department: "COORD. ADMVA. GASTRONOMIA",
+                position: "AUXILIAR DE ALMACEN",
+                startDate: new Date(2011, 6, 12),
+                avatar: "https://ui-avatars.com/api/?name=Julieta+Lopez+Alvarez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 21,
+                name: "BAUTISTA VERA CATALINA",
+                department: "COORD. ADMVA. GASTRONOMIA",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2012, 6, 16),
+                avatar: "https://ui-avatars.com/api/?name=Catalina+Bautista+Vera&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 22,
+                name: "GUZMAN MOLINA JOSE ALBERTO",
+                department: "COORD. ADMVA. GASTRONOMIA",
+                position: "AUXILIAR DE ALMACEN",
+                startDate: new Date(2015, 9, 20),
+                avatar: "https://ui-avatars.com/api/?name=Jose+Alberto+Guzman+Molina&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 23,
+                name: "PEREZ PEREZ LAURA IVETTE",
+                department: "COORD. ADMVA. GASTRONOMIA",
+                position: "ASISTENTE",
+                startDate: new Date(2025, 0, 29),
+                avatar: "https://ui-avatars.com/api/?name=Laura+Ivette+Perez+Perez&background=0033A0&color=fff&size=200",
+                joinStory: "Hola, mi nombre es Ivette soy parte del equipo de coordinación administrativa de la carrera de gastronomía. \n\nLlevo 6 meses trabajando para la universidad los cuales han sido muy gratos ya que cada día se aprende algo nuevo, es un gusto trabajar para una universidad humana y con valores como la UDL. \n\nGracias por darme la oportunidad de ser parte de la institución.",
+                photos: [
+                    "https://i.postimg.cc/yN4M29NS/laura-ivette.jpg"
+                ]
+            },
+            {
+                id: 24,
+                name: "DEL MORAL GONZALEZ ALEJANDRO",
+                department: "COORD. ADMVA. GASTRONOMIA",
+                position: "AUXILIAR DE COMPRAS",
+                startDate: new Date(2025, 2, 3),
+                avatar: "https://ui-avatars.com/api/?name=Alejandro+Del+Moral+Gonzalez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 25,
+                name: "CRUZ VIDAL JESSICA VANESA",
+                department: "COORD. ADMVA. GASTRONOMIA",
+                position: "AUXILIAR DE ALMACEN",
+                startDate: new Date(2025, 6, 14),
+                avatar: "https://ui-avatars.com/api/?name=Jessica+Vanesa+Cruz+Vidal&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 26,
+                name: "NAVARRO VALENZUELA HECTOR EDMAR",
+                department: "DESARROLLO DE SISTEMAS",
+                position: "JEFE",
+                startDate: new Date(1999, 3, 16),
+                avatar: "https://ui-avatars.com/api/?name=Hector+Edmar+Navarro+Valenzuela&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 27,
+                name: "SANTANA HERMENEGILDO CARLOS",
+                department: "DESARROLLO DE SISTEMAS",
+                position: "PROGRAMADOR",
+                startDate: new Date(2005, 3, 11),
+                avatar: "https://ui-avatars.com/api/?name=Carlos+Santana+Hermenegildo&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 28,
+                name: "GONZALEZ TORRES RICARDO",
+                department: "DESARROLLO WEB",
+                position: "JEFE",
+                startDate: new Date(2013, 1, 11),
+                avatar: "https://ui-avatars.com/api/?name=Ricardo+Gonzalez+Torres&background=D50032&color=fff&size=200",
+                joinStory: "Mi nombre es Ricardo González Torres y actualmente tengo el honor de desempeñarme como Jefe de Desarrollo Web en la Universidad de Londres. Ingresé en 2013 como diseñador web, lleno de ilusión pero también con nervios, pues era mi primer empleo formal, aunque ya había trabajado en proyectos por mi cuenta. \n\nDesde el primer día descubrí un ambiente en el que la calidez y el compañerismo se viven a diario. Recuerdo que, en mi tercer día, llegué tarde por el tráfico. Fui a avisar a mi jefe, Óscar Rodríguez, y con un semblante muy serio me dijo que ya era demasiado tarde y que mejor regresara a casa. Con algo de vergüenza tomé mis cosas, pero antes de salir me alcanzaron él y su asistente, riendo a carcajadas: era solo una broma. Ese momento me hizo darme cuenta de que estaba en un lugar especial, donde incluso las “novatadas” se convierten en gestos para integrarte y hacerte sentir parte de una familia. \n\nA lo largo de los años he comprobado que esa chispa, cercanía y calidez humana son valores que definen a nuestra universidad. Aquí no solo trabajamos: compartimos risas, retos y logros. Me siento profundamente orgulloso de formar parte de este gran proyecto y de contribuir, desde mi trinchera, al crecimiento de una institución que, después de 45 años, sigue transformando vidas y formando personas con valores, conocimiento y un auténtico sentido humano. \n\n¡Felicidades, Universidad de Londres, por estos 45 años de historia y por todos los que están por venir!",
+                photos: [
+                    "https://i.postimg.cc/Qd8DhLkX/Whats-App-Image-2025-08-07-at-16-20-37-topaz-face-upscale-4x.jpg"
+                ]
+            },
+            {
+                id: 29,
+                name: "PEREA DIAZ PEDRO URIEL",
+                department: "DESARROLLO WEB",
+                position: "DESARROLLADOR WEB",
+                startDate: new Date(2019, 8, 23),
+                avatar: "https://ui-avatars.com/api/?name=Pedro+Uriel+Perea+Diaz&background=0033A0&color=fff&size=200",
+                joinStory: "Cuando llegué a la universidad de Londres, todo era nuevo y desconocido. Pero desde el primer día, el equipo de trabajo y los colaboradores me hicieron sentir bienvenido. Rápidamente encontré un ambiente de confianza, respeto y compañerismo. \n\nMe sentí valorado y motivado. Disfrutaba venir cada día, no solo por el trabajo, sino por las personas que lo hacen especial. \n\nHoy, después de seis años, sigo pensando que esto es más que una empresa: es una gran familia. He tenido la fortuna de conocer gente nueva, aprender de muchos, y trabajar junto a personas que hacen todo más fácil y humano. \n\nMe siento orgulloso de formar parte de Universidad de Londres.",
+                photos: [
+                    "https://i.postimg.cc/nc5KtZtm/image-11-topaz-face-upscale-3-4x.png"
+                ]
+            },
+            {
+                id: 30,
+                name: "SANTIAGO DEL ANGEL ILSE JAZMIN",
+                department: "DESARROLLO WEB",
+                position: "DESARROLLADOR WEB JR",
+                startDate: new Date(2021, 10, 3),
+                avatar: "https://ui-avatars.com/api/?name=Ilse+Jazmin+Santiago+Del+Angel&background=D50032&color=fff&size=200",
+                joinStory: "Noviembre de 2021. Era plena época de pandemia y, como muchos, inicié mi vida laboral desde casa, frente a una pantalla, en el área de Desarrollo Web. No sabía que aquel primer login marcaría el inicio de una etapa tan significativa en mi vida profesional. \n\nAl principio, todo era nuevo: plataformas, procesos, reuniones virtuales con rostros que solo conocía por cámara. La adaptación fue un desafío, pero también una oportunidad para aprender y crecer en un entorno completamente digital. Aunque contaba con conocimientos técnicos, fue la primera vez que enfrenté un reto real, con impacto directo en el funcionamiento de una institución. \n\nPasé días investigando, probando, pidiendo retroalimentación y trabajando en equipo con personas que, aunque distantes físicamente, me enseñaron el valor de la colaboración. \n\nFue entonces cuando entendí que lo que hacemos tiene un propósito que va más allá del código. \n\nCada desafío ha sido una oportunidad para aprender, innovar y contribuir al crecimiento de la UDL. \n\nHoy, al celebrar un aniversario más de esta institución que me abrió las puertas en un momento tan incierto, solo puedo agradecer por todo lo vivido y aprendido. La UDL no solo ha sido mi lugar de trabajo, sino también una parte fundamental de mi formación como profesional.",
+                photos: [
+                    "https://i.postimg.cc/2SkY5nYR/1836883399.jpg"
+                ]
+            },
+            {
+                id: 31,
+                name: "VARGAS SILVA EMMANUEL",
+                department: "DESARROLLO WEB",
+                position: "DESARROLLADOR WEB JR",
+                startDate: new Date(2022, 0, 12),
+                avatar: "https://ui-avatars.com/api/?name=Emmanuel+Vargas+Silva&background=0033A0&color=fff&size=200",
+                joinStory: "Ingresé a la Universidad de Londres en un momento histórico, marcado por la pandemia. Desde entonces, esta institución me ha brindado las herramientas y el apoyo necesarios para alcanzar mis metas profesionales y personales. Hoy, sigo cumpliendo objetivos y creciendo de la mano de la Universidad, compartiendo logros y fortaleciendo juntos nuestro camino",
+                photos: [
+                    "https://i.postimg.cc/pXNXP9yR/1868377415.jpg"
+                ]
+            },
+            {
+                id: 32,
+                name: "ESPINOSA LOPEZ ALEJANDRA DEL SAGRADO CORAZON",
+                department: "DIRECCION ACADEMICA",
+                position: "DIRECTOR",
+                startDate: new Date(1991, 1, 26),
+                avatar: "https://ui-avatars.com/api/?name=Alejandra+Espinosa+Lopez&background=D50032&color=fff&size=200",
+                joinStory: "Mi historia en la UDL inició hace casi 35 años, era febrero de 1991 y yo estaba aún en la universidad (UAM-Iztapalapa) terminando mi proyecto final de la Licenciatura en Computación. Recuerdo la tarde en la que yo ya estaba por retirarme y Héctor, mi profesor de programación, me estaba buscando para solicitar mi apoyo. No está de más decir que yo había realizado mi servicio social en la escuela en el programa de apoyo a la docencia justamente con él, mis tareas consistían en ayudarlo a calificar los programas que dejaba de tarea a sus nuevos estudiantes y dar asesorías a aquellos a los que se les dificultaba aún programar, lo que de alguna manera me dió experiencia como docente.\n\nRegresando a ese día del mes de febrero de 1991, día que personalmente considero como un hito importante ya que marcó la pauta de lo que sería mi vida profesional, Héctor me pidió de favor que lo apoyara impartiendo un curso -de 2 semanas- en una universidad particular en la que había vendido Karel: programa que él y su hermano Jorge habían desarrollado en la UAM y que ahora estaban comercializando como una herramienta para aprender programación estructurada.\n\nRecuerdo que mi primer respuesta fue no, tenía varios pendientes en la escuela que consumían un tiempo importante de mi día y no quería distraerme, él insistió diciendo \"por favor, yo no puedo ir por mi trabajo, solo son dos semanas. Es un curso de Karel, tu lo conoces muy bien\" después de insistirme un rato, acepté aunque no estaba muy convencida. Lo único que me dijo fue el nombre de la escuela y la dirección: CEUL, San Luis Potosí 154 en la colonia Roma y el nombre del director: Oscar Rodríguez, \"Llámale y haz una cita con él, el curso es en las tardes. Es muy joven\" le contesté que me comunicaría y me fuí a casa pensando que solo eran dos semanas, que podía hacerlo sin problema.\n\nAl día siguiente me comuniqué a la escuela e hice la cita, no recuerdo haber estado por la Colonia Roma antes, esos no eran mis rumbos, por lo que busqué en la guía Roji el mejor camino para llegar, les conté a mis papás que iría a ver al director de una escuela para dar un curso de programación y que regresaba más tarde. Al llegar me recibió Gaby Vega, ella era la recepcionista. Recuerdo que le dije \"vengo a ver al director: Oscar Rodríguez, tengo una cita\" me contestó muy amable que en un momento me recibía.\n\nLa oficina estaba sobre el pasillo, era una oficina muy pequeña, cuando entré me presenté, le dije que venía de parte de Héctor para impartir un curso de Karel a un grupo de estudiantes. Aclaré que Héctor me había dicho que el curso era de 2 semanas. No recuerdo que Oscar me haya preguntado sobre mi experiencia o a qué me dedicaba, solo me dijo \"el curso inicia el lunes a las 18:00 horas, Es en el laboratorio de cómputo. Nos vemos.\" Yo contesté \"ok nos vemos el lunes\", no tenía ni idea de cuántos estudiantes serían, mucho menos de cuánto me iban a pagar; tampoco pregunté.\n\nEn ese momento no podía saber, ni imaginar que -al terminar el curso- sería invitada a integrarme al grupo de docentes para dar clases a los estudiantes de la primera generación de la Licenciatura en Informática. Pero cuando eso pasó y Oscar me pidió quedarme para impartir dos materias: Laboratorio de Sistemas y Sistemas Operativos, recuerdo haber dicho que no, yo tenía otros planes, dedicarme a programar, a hacer sistemas como la mayoría de mis amigos y compañeros de la universidad; por mi mente no había pasado la idea de dedicarme a dar clases, yo misma aún estaba estudiando y aunque ya había tomado la clase de Sistemas operativos no significaba que dominara el tema como para dar clase.\n\nNada de eso importó, era viernes y el semestre empezaba el lunes y no había maestro para esas dos materias por lo que de un momento a otro yo ya tenía en la mano los temarios, fue la contratación más rápida de la historia. Yo tenía 22 años y era más joven que la mitad de los estudiantes de mi grupo de 6o. semestre de la Licenciatura en Informática, obvio no me creyeron cuando les dije que yo sería su maestra pero empecé la clase de Laboratorio de Sistemas preguntando ¿qué saben de programación…? y así fue el inicio de una ya muy larga y satisfactoria trayectoria en mi muy querida Universidad de Londres.",
+                photos: [
+                    "https://i.postimg.cc/155w2MYb/DSC-0020.jpg",
+                    "https://i.postimg.cc/zBv1NKmz/20150304-174009.jpg",
+                    "https://i.postimg.cc/ZKpnXtFf/20160316-115247.jpg",
+                    "https://i.postimg.cc/wvrYjMHh/20191216-Entrega-de-Despensas-RH-46.jpg",
+                    "https://i.postimg.cc/c1V6D4Yg/2815d661-612a-4dbb-af92-02e751322df4.jpg",
+                    "https://i.postimg.cc/WbkTtGdt/2dfeb563-7449-46be-95a3-a6f826cb0c7d.jpg",
+                    "https://i.postimg.cc/0y1xSzSn/700ad085-c920-499b-9a93-dbb6a792214f.jpg",
+                    "https://i.postimg.cc/J7yGcByC/fotoAle.jpg",
+                    "https://i.postimg.cc/rwTsknfq/IMG-20211116-095317.jpg",
+                    "https://i.postimg.cc/252fgTK9/IMG-20220513-100014.jpg",
+                    "https://i.postimg.cc/3ND54hJz/Whats-App-Image-2017-04-19-at-8-59-13-PM.jpg",
+                    "https://i.postimg.cc/3W5M2qkN/Whats-App-Image-2020-03-20-at-9-34-23-PM.jpg"
+                ]
+            },
+            {
+                id: 33,
+                name: "ZARAGOZA ALMOREJO MARIA DEL CARMEN",
+                department: "DIRECCION ACADEMICA",
+                position: "ASESOR ACADEMICO",
+                startDate: new Date(2019, 5, 1),
+                avatar: "https://ui-avatars.com/api/?name=Maria+Del+Carmen+Zaragoza+Almorejo&background=0033A0&color=fff&size=200",
+                joinStory: "Llegué en el año 2000 ¿Cómo? Jajaja de la manera más inesperada. \n\nYo trabajaba en el sector escolar 7 de educación primaria ubicado en la calle de Jalapa y en aquel entonces fui a la escuela Bertha Von Glumer para solicitar una beca de secundaria de mi hija Marcela. \n\nAl llegar el orientador estaba muy molesto con una mamá que también había ido a solicitar beca, pero por algún motivo su conversación fue muy agresiva. \n\nCon todo el susto del mundo entré después de esa mamá y le comenté que yo también quería beca y de botepronto me preguntó que estudios tenía, le comenté que era maestra de educación primaria y psicóloga. \n\nDe inmediato la pregunta clave ¿quiere dar clases? Y pues desconcertada le dije que sí, me comentó que él iba a poner su consultorio privado y tendría que deja sus clases ¿adivina dónde? En la Universidad de Londres. Me dio una tarjeta para que me entrevistara con la directora de la licenciatura en psicología (Ivonne Wiener) y también me dio la beca de Marce. \n\nLe comenté a mi jefa del sector 7 la propuesta y me animó a ir. \n\nLlegando me presenté con Ivonne y me dijo “viene usted muy bien recomendada” y me ofreció los grupos del maestro que si me preguntas quién era, no te sé decir, nunca lo volví a ver. \n\nAsí llegué a la UDL, primero en turno de las 7 de la mañana y de ahí me iba al sector, luego matutino e intermedio y seguía en el sector, más tarde en matutino, intermedio y vespertino (con Claudia López Becerra) y seguía en el sector. ¿Cómo le hacía? No me preguntes. \n\nAsí llegué a concursar en el maestro del año de ALPES y tuvieron a bien darme el premio de la Universidad en el 2014. De ahí me ofreciste pasar a ser Asesora educativa y dejar las clases; al mismo tiempo yo ya me estaba jubilando de la SEP y en aquel entonces trabajaba en la UDL de 8am a 8 pm. Después, cuando Ale Espinosa se fue de directora de Alliant, me quedé como Directora académica y así sigo. \n\nNo puedo omitir que, a raíz de la muerte de mi esposo, me fui un año de la UDL ya que me ofrecieron una Dirección Gral. en otra escuela, pero gracias a tu constancia y por el amor a la UDL regresé al año y aquí sigo, muy contenta y agradecida con Dios por la gran familia que me ha dado en esta Universidad. \n\nMis grandes recuerdos, haber instalado el Modelo por competencias en toda la Universidad y haber iniciado las Prácticas académicas en la Licenciatura en psicología por instrucción de Dirección general y con el apoyo del Mtro. Andrés Vázquez y de ahí a todas las carreras hasta la actualidad lo cual le dio una transformación a la UDl de un modelo tradicional a un modelo más constructivo y experiencial (y seguimos luchando por eso) \n\nHe tenido la oportunidad de participar en hermosas capacitaciones con directores y profesores, he visto graduarse a muchas generaciones de todas las carreras, hemos visto crecer nuevas carreras y participar en un sinfín de reuniones para planear cómo ser cada día mejores. Recientemente he tenido la oportunidad de poner la primera piedra en lo que hoy se fortalece como UDLInternacional. \n\nMuchas otras cosas han sucedido en este periodo, mis dos hijos son egresados de la UDL, grandes alegrías y pérdidas familiares, de mi madre, mi hermano, mi esposo, de mi asistente Claudia y de mi asistente Cynthia, hermosas niñas y en todas ellas el cariño de todos los directores y el tuyo Oscar han sido de inmenso apoyo. \n\nNo sé cuánto tiempo Dios me depare en esta, mi segunda casa, pero el que sea, trabajaré con la misma alegría y ahínco que hasta la fecha lo he hecho.\n\nMuchas gracias por leer este relato.",
+                photos: [
+                    "https://i.postimg.cc/qB5hz07M/Whats-App-Image-2025-08-06-at-4-51-51-PM.jpg",
+                    "https://i.postimg.cc/QxKB7PBg/Whats-App-Image-2025-08-06-at-4-52-07-PM.jpg"
+                ]
+
+            },
+            {
+                id: 34,
+                name: "RAMIREZ ESPEJEL ADRIANA",
+                department: "DIRECCION ACADEMICA",
+                position: "ASISTENTE",
+                startDate: new Date(2023, 8, 13),
+                avatar: "https://ui-avatars.com/api/?name=Adriana+Ramirez+Espejel&background=D50032&color=fff&size=200",
+                joinStory: "En septiembre de 2023, mientras exploraba opciones laborales en distintas bolsas deempleo, me encontré con una vacante que llamó poderosamente mi atención: Asistente de Dirección en la Universidad de Londres. Sin pensarlo mucho, decidí llamar directamente a la institución. Me proporcionaron el correo electrónico de un colaborador del área de Capital Humano, y ese mismo día envié mi CV. Al principio no obtuve respuesta, así que pensé que tal vez no se había dado la oportunidad. \n\nSin embargo, días después recibí una llamada que, por azares del destino, no pude contestar. Afortunadamente, también me contactaron por correo electrónico, y respondí de inmediato. Agendamos mi primera entrevista y, a partir de ahí, comenzó un proceso con varias etapas, cada una de ellas llena de expectativas y emoción. \n\nFue en una de esas entrevistas donde conocí a la Mtra. Carmen, quien hoy es mi jefa directa. Desde el primer momento hicimos clic: hubo una conexión inmediata, un entendimiento natural, quizás porque compartimos la misma formación docente. Me sentí cómoda, escuchada y con muchas ganas de formar parte de su equipo. \n\nDespués de esa última entrevista pasaron dos semanas sin novedades, y confieso que llegué a pensar que no había sido seleccionada. Justo cuando estaba perdiendo toda esperanza, recibí una llamada de Fernando Tapia para darme la noticia: ¡había sido elegida! \n\nCuriosamente, mi primer día en la UDL coincidió con el cumpleaños de la Mtra. Carmen. La bienvenida que recibí fue muy cálida y cercana, lo que reafirmó esa buena impresión inicial. \n\nY así fue como llegué a la Universidad de Londres, un espacio donde hoy me siento feliz, motivada y profundamente agradecida. Aquí he encontrado no solo un entorno profesional estimulante, sino también una segunda familia: personas con quienes comparto valores, pasiones y el deseo genuino de crecer.",
+                photos: [
+                    "https://i.postimg.cc/pLxFVXsh/Whats-App-Image-2025-08-07-at-8-42-14-AM.jpg"
+                ]
+            },
+            {
+                id: 35,
+                name: "CASTELLON ZACARIAS LILIA",
+                department: "DIRECCION ADMINISTRATIVA",
+                position: "ASISTENTE DE DIRECCION ADMINISTRATIVA Y COMPRAS",
+                startDate: new Date(2004, 11, 1),
+                avatar: "https://ui-avatars.com/api/?name=Lilia+Castellon+Zacarias&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 36,
+                name: "HERNANDEZ CONTRERAS CORAZON DE JESUS",
+                department: "DIRECCION ADMINISTRATIVA",
+                position: "ASISTENTE",
+                startDate: new Date(2019, 7, 29),
+                avatar: "https://ui-avatars.com/api/?name=Corazon+De+Jesus+Hernandez+Contreras&background=D50032&color=fff&size=200",
+                joinStory: "Antes de ingresar a la Universidad de Londres, me encontraba desempleada, ya que había dejado un entorno laboral marcado por el acoso. Tras enfrentar varios engaños por parte de empresas y dar muchas vueltas sin éxito, llegué por casualidad a una alcaldía en busca de información sobre oportunidades de empleo. Ahí, me brindaron apoyo de forma muy amable para realizar una búsqueda laboral. \n\nFue entonces cuando me hablaron de una vacante en la Universidad de Londres. La idea de formar parte de esta institución me entusiasmó desde el primer momento, ya que siempre me ha parecido un lugar interesante y con gran valor académico. El proceso de selección fue algo largo, pero siempre tuve la certeza de que valdría la pena esperar. \n\nEl 19 de septiembre, justo cuando estaba por aceptar otra oferta laboral, recibí una llamada que cambiaría el rumbo de mi vida: había sido seleccionada para el puesto. La emoción que sentí fue inmensa. Desde entonces, esta institución se ha convertido en mi segunda casa; me ha abierto las puertas, me ha apoyado en todo momento y me ha permitido crecer tanto personal como profesionalmente. Aquí he conocido personas valiosas que han sido clave para seguir adelante y mantenerme motivada.",
+                photos: [
+                    "https://i.postimg.cc/c1YFHhRv/generation-64bbc2da-380d-47ca-9e0d-373ef4b9d567.png",
+                    "https://i.postimg.cc/4yzPS4f6/generation-a3570cb6-8198-40b5-bcb1-de7b77b4f9ef.png",
+                    "https://i.postimg.cc/kGrwsRmM/Whats-App-Image-2025-08-05-at-10-08-23-AM.jpg"
+                ]
+            },
+            {
+                id: 37,
+                name: "CAMACHO PEREZ EVA",
+                department: "DIRECCION ADMINISTRATIVA",
+                position: "DIRECTOR",
+                startDate: new Date(2023, 10, 16),
+                avatar: "https://ui-avatars.com/api/?name=Eva+Camacho+Perez&background=0033A0&color=fff&size=200",
+                joinStory: "El 24 de agosto de 2023 me encontraba laborando en la Universidad del Valle de México, participando en varios proyectos importantes: la acreditación FIMPES y la apertura de la carrera de Medicina. Ese día, recibí un mensaje a través de LinkedIn de Ana Guillén, invitándome a formar parte de la Universidad de Londres. \n\nEn muchos momentos había orado por un cambio, pues, aunque me sentía contenta, el estrés y la presión eran excesivos. Al recibir el mensaje de Ana, sentí una mezcla de alegría y confusión. En UVM, mi jefe directo había sido también mi director en la licenciatura, por lo que, además del compromiso profesional, existía una lealtad personal. Sin embargo, mi salud y mi tiempo ya se veían comprometidos, así que decidí continuar con el proceso de selección.\n\nTuve varias entrevistas: primero con Ana, luego con Liz Torres, y finalmente con Óscar. En noviembre recibí la gran noticia: había sido seleccionada para ocupar el cargo de Dirección Administrativa. Me sentí feliz, aunque también me invadía la incertidumbre de cómo comunicarlo a mi jefe. Busqué el momento adecuado para decirle que estaba en proceso de transición hacia la Universidad de Londres y que ya había tomado la decisión. Su respuesta fue un abrazo y unas palabras que aún recuerdo: “Siempre que sea para mejorar, cuenta conmigo”. \n\nAsí, el 16 de noviembre me presenté en las oficinas del plantel Querétaro. Fui recibida por un gran equipo liderado por Cynthia, quien me explicó los procesos institucionales. También tuve reuniones con Grace, quien amablemente me orientó en diversas áreas, y con Óscar, con quien confirmé que estaba por iniciar una etapa muy positiva. Sentí que había tomado la mejor decisión. \n\nHoy, a punto de cumplir dos años en esta maravillosa institución, no tengo duda: llegué al lugar correcto. He encontrado personas excepcionales, con gran calidez humana, y una universidad comprometida con formar no solo excelentes profesionistas, sino seres humanos con valores y propósito. \n\nGracias, Universidad de Londres, por abrirme las puertas y por todo lo que hemos construido juntos desde aquel primer día.",
+                photos: [
+                    "https://i.postimg.cc/5Npj44z0/Foto-Eva-topaz-face-upscale-4x.jpg"
+                ]
+            },
+            {
+                id: 38,
+                name: "ORTIZ CID JESUS",
+                department: "DIRECCION DE ADMISIONES",
+                position: "DIRECTOR DE ADMISIONES",
+                startDate: new Date(2009, 6, 1),
+                avatar: "https://ui-avatars.com/api/?name=Jesus+Ortiz+Cid&background=D50032&color=fff&size=200",
+                joinStory: "Ingresé a trabajar en la Universidad cuando todavía se llamaba CEUL. En ese momento, mi llegada no parecía algo definitivo: venía regresando de Barcelona, España, y acepté un contrato temporal por tres meses antes de volver a partir.\n\nEntré cuando el área se llamaba Relaciones Públicas y apenas se estaba formando el departamento en el plantel Guanajuato. Recuerdo perfectamente cómo fueron esos primeros días: no teníamos escritorios, así que improvisamos con mesitas de sala. Nos instalaron algunas líneas telefónicas y, con eso, comenzamos a trabajar. Éramos pocos, con pocos recursos, pero con muchas ganas.\n\nUn día, mientras estaba en el trabajo, contesté una llamada que marcó un antes y un después en mi vida. Era la abuelita de mi esposa, quien me dijo con toda naturalidad: \"¿Ya sabes que vas a ser papá?\"\nSentí como si me hubieran echado literalmente una cubeta de agua fría que me recorrió por mi cuerpo. Esa noticia me sorprendió y fue en ese instante que decidí quedarme unos meses más pues iba a necesitar estabilidad, prepararme y ahorrar para todo lo que venía.\n\nEsos \"meses más\" se convirtieron en más de 20 años. He vivido la transformación de la Universidad, el cambio de logotipo, la evolución de los servicios, la expansión de planteles… y también el paso de muchos compañeros. En estos años he experimentado alegrías, momentos de tensión, desafíos, tristezas, enojos, decepciones, aprendizajes y muchas emociones que forman parte esencial de mi vida laboral.\n\nHoy que la Universidad cumple 45 años, me doy cuenta con asombro y gratitud de que he compartido casi la mitad de su historia. Y lo más valioso es saber que mi historia personal también está entrelazada con la historia de esta gran institución.\n\nGracias y Felicidades por estos 45 Años.",
+                photos: [
+                    "https://i.postimg.cc/XvJBph4b/foto-evento-10-a-os-posgrado.jpg",
+                    "https://i.postimg.cc/4dHK19Y2/Foto-JOC-en-escritorio.jpg",
+                    "https://i.postimg.cc/nhTQVZ82/Foto-relaciones-publicas-en-guanajuato.jpg",
+                    "https://i.postimg.cc/fRM9hyPk/Foto-relaciones-publicas-en-guanajuato-2.jpg",
+                    "https://i.postimg.cc/PqRpZ458/Foto-Relaciones-P-blicas-Preparatoria.jpg"
+                ]
+            },
+            {
+                id: 39,
+                name: "GONZALEZ VALLEJO ARTURO",
+                department: "DIRECCION DE ADMISIONES",
+                position: "EJECUTIVO DE ADMISIONES",
+                startDate: new Date(2012, 5, 15),
+                avatar: "https://ui-avatars.com/api/?name=Arturo+Gonzalez+Vallejo&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 40,
+                name: "JIMENEZ UBIETA ANA LILIA",
+                department: "DIRECCION DE ADMISIONES",
+                position: "EJECUTIVO DE ADMISIONES",
+                startDate: new Date(2015, 5, 11),
+                avatar: "https://ui-avatars.com/api/?name=Ana+Lilia+Jimenez+Ubieta&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 41,
+                name: "MOSQUEDA BARRON GUSTAVO",
+                department: "DIRECCION DE ADMISIONES",
+                position: "EJECUTIVO DE ADMISIONES",
+                startDate: new Date(2017, 2, 13),
+                avatar: "https://ui-avatars.com/api/?name=Gustavo+Mosqueda+Barron&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 42,
+                name: "GARCIA GARCIA THANIA MARCELA",
+                department: "DIRECCION DE ADMISIONES",
+                position: "EJECUTIVO DE ADMISIONES",
+                startDate: new Date(2020, 1, 10),
+                avatar: "https://ui-avatars.com/api/?name=Thania+Marcela+Garcia+Garcia&background=D50032&color=fff&size=200",
+                joinStory: "Cuando entre a la Universidad fue después de unas pequeñas vacaciones obligadas ya que en el mes de Noviembre de 2019 acababa de quedarme sin trabajo, decidí darme todo el mes de diciembre para estar con la familia, cargar pila, para que iniciando 2020 me pusiera en búsqueda de una nueva experiencia, y vaya que la encontre ya que a mediados de Enero me llamaron a entrevista con Paty Rios, días después yo ya formaba parte de esta Gran Institución.\n\nRecuerdo perfecto que fue el 10 de Febrero de 2020 que inicie esta nueva etapa en el equipo de Jesús en Luis Cabrera, solo que el gusto de estar en los planteles me duró muy poco ya que un mes después nos mandaron a casa por la llegada de la Pandemia, pero eso no impidió que hubieran meses donde pudiera disfrutar el plantel Vertiz, Luis Cabrera o San Luis por las guardias que en esos entonces hacíamos y nos tocaba estar cuando mucho dos asesores por plantel.\n\nEsta foto es el más claro ejemplo de cuánto disfruto mi trabajo, ya que no solo es tener que estar en la oficina recibiendo a nuestros alumnos o posibles alumnos, sino también es esa convivencia con los compañeros y no solo de nuestra área sino como los compañeros y gran familia que somos, realmente agradezco a la Universidad por permitirme crecer profesionalmente como tener grandes amigos.",
+                photos: [
+                    "https://i.postimg.cc/jd5wSmX4/Whats-App-Image-2025-08-05-at-11-54-04-AM.jpg"
+                ]
+            },
+            {
+                id: 43,
+                name: "PEREZ APARICIO ANGEL",
+                department: "DIRECCION DE ADMISIONES",
+                position: "EJECUTIVO DE ADMISIONES",
+                startDate: new Date(2022, 2, 4),
+                avatar: "https://ui-avatars.com/api/?name=Angel+Perez+Aparicio&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 44,
+                name: "RODRIGUEZ SUAREZ SAUL",
+                department: "DIRECCION DE ADMISIONES",
+                position: "EJECUTIVO DE ADMISIONES",
+                startDate: new Date(2023, 3, 28),
+                avatar: "https://ui-avatars.com/api/?name=Saul+Rodriguez+Suarez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 45,
+                name: "GARCIA JIMENEZ ALEJANDRO",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "EJECUTIVO DE ADMISIONES",
+                startDate: new Date(2012, 6, 6),
+                avatar: "https://ui-avatars.com/api/?name=Alejandro+Garcia+Jimenez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 46,
+                name: "MARTINEZ CORTES VICTOR AGUSTIN",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "EJECUTIVO DE PROMOCION",
+                startDate: new Date(2017, 6, 3),
+                avatar: "https://ui-avatars.com/api/?name=Victor+Agustin+Martinez+Cortes&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 47,
+                name: "DESEUSA RODRIGUEZ GABRIELA NOEMI",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "EJECUTIVO DE ADMISIONES",
+                startDate: new Date(2019, 2, 25),
+                avatar: "https://ui-avatars.com/api/?name=Gabriela+Noemi+Deseusa+Rodriguez&background=0033A0&color=fff&size=200",
+                joinStory: "La UDL no es solo mi lugar de trabajo, también es la Universidad que me formó como profesional. Orgullosamente egresada y parte de esta gran comunidad!!!\n\nTQM UDL",
+                photos: [
+                    "https://i.postimg.cc/zfTDXZcv/1000000193.jpg"
+                ]
+            },
+            {
+                id: 48,
+                name: "GAYTAN COYOTECATL ROSALIA MONSERRAT",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "EJECUTIVO DE ADMISIONES",
+                startDate: new Date(2021, 7, 9),
+                avatar: "https://ui-avatars.com/api/?name=Rosalia+Monserrat+Gaytan+Coyotecatl&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 49,
+                name: "RICO AVELEYRA CHRISTIAN ALBERTO",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "EJECUTIVO DE ADMISIONES",
+                startDate: new Date(2022, 6, 11),
+                avatar: "https://ui-avatars.com/api/?name=Christian+Alberto+Rico+Aveleyra&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 50,
+                name: "PLATA ANAYA ELSA IVONNE",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "DIRECTOR DE ADMISIONES Y MERCADOTECNIA",
+                startDate: new Date(2023, 4, 4),
+                avatar: "https://ui-avatars.com/api/?name=Elsa+Ivonne+Plata+Anaya&background=D50032&color=fff&size=200",
+                joinStory: "🎉 45 años de historia, amor y transformación 🎓\n\nDoy gracias a Dios y a la vida por ser parte de esta gran celebración: ¡los 45 años de nuestra querida Universidad de Londres! 💙\n\nSolo llevo 2 años aquí… ¡pero han sido tan intensos que siento como si llevara 20! 😅\n Y aunque no pueda hablar desde el tiempo, sí puedo hablar desde el corazón.\n Porque lo grande no siempre se mide en años… también se mide en aprendizajes, en retos, en risas compartidas, en lágrimas transformadas, en logros celebrados y en vidas tocadas.\n\nGracias, UDL, por ser mi escuela, mi puente, mi hogar profesional, mi inspiración diaria.\nGracias por las personas maravillosas, los maestros de vida, los días difíciles y los días de gloria. Por la confianza depositada en mí y  por dejarme servir, aprender y crecer… con un equipo que no solo trabaja: vibra, sueña, se compromete y transforma.\n\n¡Vamos por 45 años más de formar, inspirar y cambiar vidas! 🫶\n UDL, te amo.\n ¡Y que no se diga que no lo dije con todo el corazón y una sonrisota! 😄",
+                photos: [
+                    "https://i.postimg.cc/59mL0wMb/21d. -8886-73376db198da.jpg",
+                    "https://i.postimg.cc/9MhwXf8D/a594b857-4158-4cdd-9796-ea501973b9d7.jpg",
+                    "https://i.postimg.cc/jSD7ZmnS/IMG-2791.jpg",
+                    "https://i.postimg.cc/SK8zp9r0/Whats-App-Image-2025-08-05-at-2-52-17-PM.jpg",
+                    "https://i.postimg.cc/J46X3MnF/Whats-App-Image-2025-08-05-at-2-52-17-PM-1.jpg",
+                    "https://i.postimg.cc/g2165s3q/Whats-App-Image-2025-08-05-at-2-52-17-PM-2.jpg",
+                    "https://i.postimg.cc/pXX8np28/Whats-App-Image-2025-08-05-at-2-52-17-PM-3.jpg",
+                    "https://i.postimg.cc/7hqz9L0F/Whats-App-Image-2025-08-05-at-5-37-46-PM.jpg",
+                    "https://i.postimg.cc/4yw9ST1m/Whats-App-Image-2025-08-05-at-5-38-02-PM.jpg"
+                ]
+            },
+            {
+                id: 51,
+                name: "GALINDO ARIZAGA ABIGAIL",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "EJECUTIVO DE ADMISIONES",
+                startDate: new Date(2023, 4, 8),
+                avatar: "https://ui-avatars.com/api/?name=Abigail+Galindo+Arizaga&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 52,
+                name: "GONZALEZ CHAVEZ JESUS ALBERTO",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "EJECUTIVO DE ADMISIONES",
+                startDate: new Date(2023, 5, 21),
+                avatar: "https://ui-avatars.com/api/?name=Jesus+Alberto+Gonzalez+Chavez&background=D50032&color=fff&size=200",
+                joinStory: " ",
+                photos: [
+                    "https://i.postimg.cc/449zGqBH/image-4-topaz-face-upscale-4x.png",
+                    "https://i.postimg.cc/Hs1bkzhZ/image-5-topaz-face-upscale-4x.png",
+                    "https://i.postimg.cc/G2ZGYxhp/image-6.png"
+                ]
+            },
+            {
+                id: 53,
+                name: "OLMOS NARVAEZ MAYELA MORAMAY",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "EJECUTIVO",
+                startDate: new Date(2023, 5, 26),
+                avatar: "https://ui-avatars.com/api/?name=Mayela+Moramay+Olmos+Narvaez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 54,
+                name: "MURILLO CUELLAR MELANIE IVANA",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "EJECUTIVO DE TELEMARKETING",
+                startDate: new Date(2023, 6, 26),
+                avatar: "https://ui-avatars.com/api/?name=Melanie+Ivana+Murillo+Cuellar&background=D50032&color=fff&size=200",
+                joinStory: "✨ ¡Feliz Aniversario, Universidad de Londres! ✨\n\nHoy celebramos 45 años de historia, crecimiento, esfuerzo y transformación. No se trata solo de una cifra, sino del legado que hemos construido juntos, paso a paso, generación tras generación. \n\nLa Universidad de Londres no solo ha sido una institución educativa, sino también un espacio donde los sueños toman forma, donde las metas se vuelven posibles y donde día con día se escribe una historia de compromiso, calidad y pasión por la enseñanza. \n\nComo dirían BTS: “Don’t be afraid, don’t worry yourself. The end and the beginning, beginning and the end are connected.” Porque cada ciclo que cierra en esta Universidad, abre la puerta a nuevos inicios llenos de posibilidades. \n\nGracias por inspirarnos a ser mejores, por abrir caminos y por recordarnos siempre que el conocimiento es el principio de todo cambio. Que vengan muchos años más de éxito, evolución y trascendencia. \n\nCon admiración y cariño, \n\nMelanie Murillo",
+                photos: [
+                    "https://i.postimg.cc/SRrPt3MR/fin-de-campa-a-2023.jpg",
+                    "https://i.postimg.cc/WzjK8Ttx/hallowen-2023.jpg"
+                ]
+            },
+            {
+                id: 55,
+                name: "RAMIREZ ROJAS MARIA GUADALUPE",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "EJECUTIVO DE ADMISIONES",
+                startDate: new Date(2023, 6, 31),
+                avatar: "https://ui-avatars.com/api/?name=Maria+Guadalupe+Ramirez+Rojas&background=0033A0&color=fff&size=200",
+                joinStory: " ",
+                photos: [
+                    "https://i.postimg.cc/xCsFS7R4/image-10.png",
+                    "https://i.postimg.cc/MHv3ZD3K/image-7.png",
+                    "https://i.postimg.cc/257K03Bm/image-8.png",
+                    "https://i.postimg.cc/85kn9Dhv/image-9.png"
+                ]
+            },
+            {
+                id: 56,
+                name: "AVALOS SANCHEZ JOEL ALEJANDRO",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "EJECUTIVO DE TELEMARKETING",
+                startDate: new Date(2024, 5, 7),
+                avatar: "https://ui-avatars.com/api/?name=Joel+Alejandro+Avalos+Sanchez&background=D50032&color=fff&size=200",
+                joinStory: "Mi primer fin de semana en la universidad, un bonito recuerdo de una cálida bienvenida!",
+                photos: [
+                    "https://i.postimg.cc/vZRnNTG1/udl.jpg"
+                ]
+            },
+            {
+                id: 57,
+                name: "GARCIA GARRIDO ARIANA",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "DISEÑADOR DE IMAGEN INSTITUCIONAL",
+                startDate: new Date(2024, 6, 29),
+                avatar: "https://ui-avatars.com/api/?name=Ariana+Garcia+Garrido&background=0033A0&color=fff&size=200",
+                joinStory: "Hola, mi historia con la universidad comienza con un corazón roto. Me entrevistó Elsita para el puesto de diseñador y, desde el primer momento, sentí una conexión especial, como un “click” instantáneo. Poco después, me dijeron la clásica frase: “nosotros te llamamos”… pero esa llamada nunca llegó. \n\nAsí que decidí llamar yo. Me comuniqué con Paty de Recursos Humanos y me dijo: “lo siento, ya cubrimos la vacante”. Recuerdo que lloré, porque de verdad quería formar parte de la Universidad. Era un sueño para mí. \n\nSeguí con mi vida y, una semana después, ya me habían contratado en una agencia de publicidad. Justo el día que firme… suena el teléfono. Era Paty. Me preguntó si aún estaba interesado en la vacante. ¡Por supuesto que sí! —aunque ya había firmado con la otra empresa—. Me dijo: “te presentas el lunes”. \n\nSentí un poco de culpa por dejar la agencia, pero mi mayor deseo siempre fue estar en la Universidad de Londres.",
+                photos: [
+                    "https://i.postimg.cc/hj2VYJTR/Whats-App-Image-2025-07-31-at-6-58-36-PM.jpg",
+                    "https://i.postimg.cc/hGbL9ZGj/Whats-App-Image-2025-07-31-at-6-58-37-PM.jpg",
+                    "https://i.postimg.cc/xdSGNVnh/Whats-App-Image-2025-07-31-at-6-58-38-PM.jpg",
+                    "https://i.postimg.cc/15frLKvC/Whats-App-Image-2025-07-31-at-6-58-38-PM-1.jpg",
+                    "https://i.postimg.cc/FHSgKH50/Whats-App-Image-2025-07-31-at-6-58-39-PM.jpg",
+                    "https://i.postimg.cc/7YdnDTcx/Whats-App-Image-2025-07-31-at-6-58-40-PM.jpg",
+                    "https://i.postimg.cc/nzFvTKs1/Whats-App-Image-2025-07-31-at-6-58-49-PM.jpg"
+                ]
+            },
+            {
+                id: 58,
+                name: "SANCHEZ VAZQUEZ EDGAR",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "EJECUTIVO MULTIMEDIA",
+                startDate: new Date(2024, 7, 8),
+                avatar: "https://ui-avatars.com/api/?name=Edgar+Sanchez+Vazquez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 59,
+                name: "CAMPOS SIERRA DANIEL",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "COMMUNITY MANAGER",
+                startDate: new Date(2024, 7, 15),
+                avatar: "https://ui-avatars.com/api/?name=Daniel+Campos+Sierra&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 60,
+                name: "NAVARRO MEDINA MONTSERRAT DE JESUS",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "EJECUTIVO DE TELEMARKETING",
+                startDate: new Date(2025, 0, 31),
+                avatar: "https://ui-avatars.com/api/?name=Montserrat+De+Jesus+Navarro+Medina&background=D50032&color=fff&size=200",
+                joinStory: "Llevaba apenas 2 meses en la Universidad de Londres y no esperaba mucho ese día, siendo nueva y estando lejos de mi familia. Pero mis compañeros me sorprendieron con este detalle que hizo toda la diferencia. \n\nFue mi primer cumpleaños en el trabajo y me hicieron sentir bienvenida y parte del equipo. No siempre es fácil estar lejos de casa, pero ese día confirmé que estoy rodeada de buenas personas. \n\nGracias por hacerlo especial  🙌",
+                photos: [
+                    "https://i.postimg.cc/tgSHY0cb/Whats-App-Image-2025-08-06-at-9-22-34-AM.jpg"
+                ]
+            },
+            {
+                id: 61,
+                name: "ROCHA GUEVARA IRVING MAXIMILIANO",
+                department: "DIRECCION DE ADMISIONES Y MERCADOTECNIA",
+                position: "EJECUTIVO DE TELEMARKETING",
+                startDate: new Date(2025, 4, 26),
+                avatar: "https://ui-avatars.com/api/?name=Irving+Maximiliano+Rocha+Guevara&background=0033A0&color=fff&size=200",
+                joinStory: "Para mí, esta institución representa una oportunidad para abrir nuevas puertas hacia una etapa llena de nuevos comienzos, nuevos retos, excelentes compañeros y personalidades por descubrir.\nEn mi corto tiempo aquí, he vivido experiencias enriquecedoras que me han ayudado a asumir responsabilidades y compromisos, además de recibir una bienvenida cálida y un gran apoyo en cada paso.\n\nEstoy muy agradecido de formar parte de este equipo que impulsa tanto el crecimiento personal como profesional.",
+                photos: [
+                    "https://i.postimg.cc/d392cCJQ/image-3.png"
+                ]
+            },
+            {
+                id: 62,
+                name: "TORRES AVILES ELIZABETH",
+                department: "DIRECCION DE CAPITAL HUMANO",
+                position: "DIRECTOR",
+                startDate: new Date(1996, 6, 29),
+                avatar: "https://ui-avatars.com/api/?name=Elizabeth+Torres+Aviles&background=D50032&color=fff&size=200",
+                joinStory: "Ingresé en marzo de 1996 para hacer reclutamiento externo, y en julio de ese mismo año, CEUL me contrató como psicóloga para evaluar estudiantes y nuevo personal.\n\nDesde el primer día, me recibieron con calidez y confianza. Todo el personal de los planteles Querétaro y Luis Cabrera comíamos juntos, compartiendo experiencias y el pan de cada día, así como los cumpleaños, las fiestas como las Posadas de la Navidad, la Independencia, Día de Muertos, entre otros.\n\nComo una gran familia, unimos nuestro esfuerzo y voluntad para superar cualquier reto, integrando a nuestros seres queridos y conformando la Gran Familia CEUL.\n\nSupe entonces que podría quedarme gran parte de mi vida. Hoy, han pasado casi 30 años.",
+                photos: [
+                    "https://i.postimg.cc/SNncHyyF/capital-humano-topaz-face-upscale-3-3x.jpg",
+                    "https://i.postimg.cc/HxS7PNRk/generation-0e6e2446-38ec-41c1-9471-c7100fac0e79.png",
+                    "https://i.postimg.cc/d31GsFrC/generation-b3a7ca61-5080-405f-9c80-36c46274fd92.png",
+                    "https://i.postimg.cc/Y0sYjPzs/Liz-Torres-1-topaz-face-upscale-3-1x.jpg",
+                    "https://i.postimg.cc/xC9KZMdt/Liz-Torres-topaz-face-upscale-4x.jpg",
+                    "https://i.postimg.cc/hGBxJTVc/Whats-App-Image-2025-08-07-at-11-25-11-AM-1-topaz-face-lighting-upscale-4x.jpg",
+                    "https://i.postimg.cc/zGWKX0bx/Whats-App-Image-2025-08-07-at-11-25-38-AM-1-topaz-face-upscale-4x.jpg"
+                ]
+            },
+            {
+                id: 63,
+                name: "ECHEGOLLEN GUERRERO LILIANA CITLALLI",
+                department: "DIRECCION DE CAPITAL HUMANO",
+                position: "COORDINADOR DE CAPACITACION Y PRESTACIONES INST",
+                startDate: new Date(2014, 8, 22),
+                avatar: "https://ui-avatars.com/api/?name=Liliana+Citlalli+Echegollen+Guerrero&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 64,
+                name: "SANCHEZ AGUIRRE RENE",
+                department: "DIRECCION DE DISEÑO CURRICULAR",
+                position: "JEFE DE EVALUACION Y GESTION CURRICULAR",
+                startDate: new Date(1996, 10, 11),
+                avatar: "https://ui-avatars.com/api/?name=Rene+Sanchez+Aguirre&background=D50032&color=fff&size=200",
+                joinStory: "Ser parte de la UDL (antes CEUL) desde Noviembre de 1996 ha generado muchos momentos, recuerdos y experiencias. Viene a mi memoria un momento donde cambió mi historia en la Universidad. \n\nDespués de ingresar en Noviembre, no esperaba un aumento en todo 19977; pero para 1998 si… el cual no llegó. Por lo que empecé 1999 con la plena expectativa de que las cosas mejoraran. Desde Enero, comencé a ir a entrevistas de empleo, considerando un posible cambio de trabajo; pero desde poco antes de medio año en CEUL me comentaron la posibilidad de un cambio de condiciones laborales. Lo cual se cristalizó a partir de Agosto de ese año. \n\nEn ese momento llegué a la Dirección de Asesoría Académica para cubrir por la mañana; y debido a la apertura del plantel Orizaba, ahí era necesario un Coordinador de Control Escolar en el turno vespertino; alternativa a la cual tuve la oportunidad de acceder. Por lo que, desde ese momento comenzó mi historia, cubriendo un del doble turno en la institución, en dos áreas. \n\nDebido a ello he tenido la oportunidad de entender y conocer muchas cosas en la escuela. La información de un puesto me ha ayudado siempre con el otro. Y a lo largo de este tiempo, por lo mismo, por uno u otro puesto he ocupado espacio laboral en prácticamente todos los planteles de la Universidad: Luis Cabrera, San Luis Potosí, Querétaro, Guanajuato, Orizaba, Medellín, Vertiz.",
+                photos: [
+                    "https://i.postimg.cc/tCVcGyTV/generation-79910aa2-bcaa-41e4-83f9-78252975a756.png",
+                    "https://i.postimg.cc/L4WWWhHp/generation-c9c98652-0574-4398-80b5-236c961dc383.png",
+                    "https://i.postimg.cc/qvV5kYhD/SDC11834.jpg"
+                ]
+            },
+            {
+                id: 65,
+                name: "MORALES VELAZQUEZ ADRIANA",
+                department: "DIRECCION DE DISEÑO CURRICULAR",
+                position: "COORDINADOR",
+                startDate: new Date(2010, 8, 2),
+                avatar: "https://ui-avatars.com/api/?name=Adriana+Morales+Velazquez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 66,
+                name: "GRANADOS GARCIA VERA ANGELICA",
+                department: "DIRECCION DE DISEÑO CURRICULAR",
+                position: "DIRECTOR",
+                startDate: new Date(2012, 5, 8),
+                avatar: "https://ui-avatars.com/api/?name=Vera+Angelica+Granados+Garcia&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 67,
+                name: "LOPEZ CORONA FLOR ALEJANDRA",
+                department: "DIRECCION DE DISEÑO CURRICULAR",
+                position: "ASESOR DE DISEÑO INSTRUCCIONAL",
+                startDate: new Date(2021, 6, 1),
+                avatar: "https://ui-avatars.com/api/?name=Flor+Alejandra+Lopez+Corona&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 68,
+                name: "GOMEZ VALDEZ MARIA DE LOURDES",
+                department: "DIRECCION DE EDUCACION CONTINUA",
+                position: "DIRECTOR",
+                startDate: new Date(2003, 9, 20),
+                avatar: "https://ui-avatars.com/api/?name=Maria+De+Lourdes+Gomez+Valdez&background=D50032&color=fff&size=200",
+                joinStory: "Ingrese el 20 de octubre del 2003. \n\nLa Dra. Lourdes de la Guardia me invito a participar en la terna del proyecto de la creación del departamento de Educación Continua. \n\nCuando ingrese no tenía oficina y trabajaba en el laboratorio de cómputo del plantel de Guanajuato. \n\nDespués me dieron un lugar en el área de informes junto al conmutador. \n\nComo no tenía archivero pedí a mantenimiento 3 cajas tipo de huevo las forre con hojas de colores y le puse unas flores pegadas también de papel y las apile  para así tener un archivero para mis carpetas de expedientes y se veía muy bonito.",
+                photos: [
+                    "https://i.postimg.cc/dDMHLnvw/Imagen1-topaz-face-upscale-3-1x.png"
+                ]
+            },
+            {
+                id: 69,
+                name: "HIGUERA ROJO MARCO ANTONIO",
+                department: "DIRECCION DE EDUCACION CONTINUA",
+                position: "EJECUTIVO DE PROMOCION",
+                startDate: new Date(2019, 6, 25),
+                avatar: "https://ui-avatars.com/api/?name=Marco+Antonio+Higuera+Rojo&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 70,
+                name: "SALINAS DEL ROSARIO EMMA FERNANDA",
+                department: "DIRECCION DE EDUCACION CONTINUA",
+                position: "EJECUTIVO DE PROMOCION",
+                startDate: new Date(2023, 2, 1),
+                avatar: "https://ui-avatars.com/api/?name=Emma+Fernanda+Salinas+Del+Rosario&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 71,
+                name: "BECERRIL LOPEZ DANIEL",
+                department: "DIRECCION DE OPERACIONES Y SISTEMAS",
+                position: "DIRECTOR",
+                startDate: new Date(1994, 7, 25),
+                avatar: "https://ui-avatars.com/api/?name=Daniel+Becerril+Lopez&background=0033A0&color=fff&size=200",
+                joinStory: "Corría 1994 cuando llegué a la Universidad de Londres, aunque en ese entonces todavía era el CEUL, y yo apenas un joven de 21 años con mucha experiencia programando (empecé a los 12) y enseñando computación a niños de kínder y primaria. Sin experiencia pidiendo trabajo —porque siempre me invitaban a trabajar— decidí dar el gran paso… con un currículum impreso sin revisar y una sola idea en mente: ir a la prepa donde yo había estudiado y pedir trabajo “porque conocían mi cara”, jaja. Contra todo pronóstico, terminé sentado frente a Héctor Benítez, quien, entre risas, me explicó cómo funcionaba el mundo laboral. Pero aún así, me mandó con Oscar Rodríguez, un joven director de licenciaturas, y ahí empezó todo. \n\nSin tener idea de lo que hacía, me presenté ante Oscar, le conté mi historia y le dije que sabía programar en Basic. Él, que también programaba, me dejó un reto: crear un sistema en Visual Basic for DOS para inscripciones… ¡con foto incluida! Esa misma noche, no dormí, me desvelé programando y al amanecer al día siguiente, apenas terminé, volví (sin cita, claro) para mostrárselo. Su cara cuando le dije “ya lo terminé” fue legendaria. Lo corrió. Lo vio. Se rió. Y dijo la palabra mágica: “¡Contratado!”. Así nació el famoso cargo de “Coordinador de Automatización” (que ni yo entendía qué era), y mi vida profesional tomó un rumbo inesperadamente hermoso. \n\nDesde entonces han pasado más de 30 años. He sido Jefe de Sistemas, Director de Sistemas y ahora Director de Operaciones y Sistemas. He creado decenas de sistemas con nombres raros como SIGECE, SICOPA o SICOCHE (que aún me los critican con cariño), y sobre todo, he construido una vida aquí. No he trabajado: he vivido un proyecto de vida. La UDL me ha dado amigos entrañables, como Miriam —mi BFF eterna—, y la oportunidad de crecer de la mano de Oscar y un equipo que siempre se sintió como familia. Este lugar ha sido mi casa, mi pasión, mi montaña rusa favorita. Y como decía Chabelo: ¡hago lo que amo… y hasta me pagan por hacerlo!",
+                photos: [
+                    "https://i.postimg.cc/ZRZRZzXL/Whats-App-Image-2025-08-06-at-6-55-40-PM-topaz-face-upscale-2-5x.jpg"
+                ]
+            },
+            {
+                id: 72,
+                name: "FERNANDEZ MARTINEZ LEONEL",
+                department: "DIRECCION DE OPERACIONES Y SISTEMAS",
+                position: "LABORATORISTA DE COMPUTO",
+                startDate: new Date(2011, 8, 1),
+                avatar: "https://ui-avatars.com/api/?name=Leonel+Fernandez+Martinez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 73,
+                name: "RODRIGUEZ GONZALEZ MARISOL",
+                department: "DIRECCION DE POSGRADO",
+                position: "DIRECTOR",
+                startDate: new Date(2003, 0, 20),
+                avatar: "https://ui-avatars.com/api/?name=Marisol+Rodriguez+Gonzalez&background=0033A0&color=fff&size=200",
+                joinStory: "Ingresé a estudiar al entonces Centro de Estudios Universitarios Londres (CEUL) porque vi un anuncio en la sección amarilla. Cuando visité el plantel Luis Cabrera, me encantaron las instalaciones, así que mi hermana Maribel y yo decidimos inscribirnos a la Licenciatura en Informática. \n\nA mitad de la carrera, mi papá, que era comerciante, nos dijo que ya no podía cubrir la colegiatura. Ambas decidimos buscar trabajo para poder continuar nuestros estudios. En mi caso, envié muchas solicitudes, pero no tuve suerte. Fue entonces cuando supe que en la universidad existía un plan de becarios: trabajar dentro de la institución para cubrir la colegiatura. \n\nRecuerdo que pensé que sería complicado estar todo el día en la universidad, pues implicaba estudiar en la mañana y trabajar en la tarde. Aun así, hice la entrevista para el Centro de Innovación Educativa, a cargo de la Dra. Lourdes de la Guardia. Me fue muy bien, incluso me aplicaron un examen, pero no fui seleccionada. \n\nEn ese momento, fui a la Dirección de Psicología para conocer la razón y buscar otra opción, ya que un compañero de la licenciatura también había hecho entrevista para la misma área y a él ni siquiera le aplicaron examen. Quise evidenciar lo que consideré una situación injusta y, finalmente, me dieron la oportunidad de trabajar con la Dra. de la Guardia. \n\nEso fue en 2002. En septiembre de ese mismo año, se abrieron los posgrados y el departamento cambió de nombre. Desde entonces he trabajado en esta maravillosa área, que hoy tengo el honor de dirigir como Directora de Posgrado. \n\nAl final, sí logré adorarme, e incluso disfrutar  el horario extendido, y lo que comenzó como una solución para continuar mis estudios, se convirtió en mi vida y en mi familia: mi querida Universidad de Londres.",
+                photos: [
+                    "https://i.postimg.cc/wvP5xVY2/IMG-2443-topaz-face-upscale-4x.jpg"
+                ]
+            },
+            {
+                id: 74,
+                name: "DIAZ JUAREZ CLAUDIA ALLINE",
+                department: "DIRECCION DE POSGRADO",
+                position: "COORDINADOR ACADEMICO",
+                startDate: new Date(2006, 3, 1),
+                avatar: "https://ui-avatars.com/api/?name=Claudia+Alline+Diaz+Juarez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 75,
+                name: "QUIROGA ETIENNE MARIA DE LOURDES GUADALUPE",
+                department: "DIRECCION DE POSGRADO",
+                position: "ASESOR ACADEMICO DE MAESTRIA",
+                startDate: new Date(2014, 8, 1),
+                avatar: "https://ui-avatars.com/api/?name=Maria+De+Lourdes+Guadalupe+Quiroga+Etienne&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 76,
+                name: "CORONA AMEZCUA OSCAR ADOLFO",
+                department: "DIRECCION DE POSGRADO",
+                position: "ASESOR ACADEMICO DE MAESTRIA",
+                startDate: new Date(2018, 5, 14),
+                avatar: "https://ui-avatars.com/api/?name=Oscar+Adolfo+Corona+Amezcua&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 77,
+                name: "DIAZ MONTAÑO LUIS EDUARDO",
+                department: "DIRECCION DE POSGRADO",
+                position: "ASESOR ACADEMICO DE LICENCIATURA Y MAESTRIA",
+                startDate: new Date(2023, 7, 16),
+                avatar: "https://ui-avatars.com/api/?name=Luis+Eduardo+Diaz+Montaño&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 78,
+                name: "CALDERON ESCOTO MARIA",
+                department: "DIRECCION DE SERVICIOS ESCOLARES",
+                position: "COORDINADOR DE SERVICIOS ESCOLARES",
+                startDate: new Date(1993, 1, 24),
+                avatar: "https://ui-avatars.com/api/?name=Maria+Calderon+Escoto&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 79,
+                name: "BARRERA ANDUAGA CLAUDIA",
+                department: "DIRECCION DE SERVICIOS ESCOLARES",
+                position: "DIRECTOR",
+                startDate: new Date(1999, 5, 7),
+                avatar: "https://ui-avatars.com/api/?name=Claudia+Barrera+Anduaga&background=0033A0&color=fff&size=200",
+                joinStory: "Hola, Oscar: \n\nMe incorporé a la institución el 7 de junio de 1999. Inicié mi camino aquí tras estudiar la Licenciatura en Informática. Un día, mientras revisaba la bolsa de trabajo en el plantel de Querétaro, conocí a Liz Torres, de Recursos Humanos, quien me comentó sobre una vacante en el área de Sistemas y me invitó a realizar una entrevista y un examen con el director del área de Sistemas. Acepté sin dudarlo. \n\nTuve la oportunidad de entrevistarme con Daniel Becerril, quien me evaluó mediante una prueba práctica en computadora. Afortunadamente, fui seleccionada para el puesto y durante cinco años me desempeñé como Asistente de Sistemas. \n\nPosteriormente, surgió la oportunidad de cubrir la vacante de Jefa de Servicios Escolares. Participé en un proceso de selección junto con otros candidatos, tanto internos como externos, y resulté elegida para el puesto. Finalmente, el 1 de julio de 2015, recibí el nombramiento como Directora de Servicios Escolares, cargo que desempeñó con orgullo hasta la fecha. \n\nQuiero aprovechar este espacio para expresarte mi más sincero agradecimiento, por estos 26 años de oportunidades, aprendizaje y crecimiento profesional. Tu liderazgo y apoyo han sido fundamentales en mi desarrollo, y valoro profundamente la confianza que has depositado en mí a lo largo de este tiempo.",
+                photos: [
+                    "https://i.postimg.cc/4djv4db9/FOTO-CON-SISTEMAS.jpg",
+                    "https://i.postimg.cc/sxSYMrw0/FOTO-DE-INGRESO-topaz-face-upscale-3-5x.jpg",
+                    "https://i.postimg.cc/qRNXdnnr/FOTO-QUE-ENCONTRE-DE-DIRECTORES.jpg"
+                ]
+            },
+            {
+                id: 80,
+                name: "LOPEZ RAMIREZ JOSE ALFREDO",
+                department: "DIRECCION DE SERVICIOS ESCOLARES",
+                position: "COORDINADOR DE SERVICIOS ESCOLARES",
+                startDate: new Date(2000, 7, 16),
+                avatar: "https://ui-avatars.com/api/?name=Jose+Alfredo+Lopez+Ramirez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 81,
+                name: "SALAZAR DE LUCIO SOCORRO IRIS MARIA",
+                department: "DIRECCION DE SERVICIOS ESCOLARES",
+                position: "COORDINADOR DE SERVICIOS ESCOLARES",
+                startDate: new Date(2003, 9, 7),
+                avatar: "https://ui-avatars.com/api/?name=Socorro+Iris+Maria+Salazar+De+Lucio&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 82,
+                name: "SALCEDO LIBREROS ALICIA",
+                department: "DIRECCION DE SERVICIOS ESCOLARES",
+                position: "COORDINADOR DE SERVICIOS ESCOLARES",
+                startDate: new Date(2004, 0, 5),
+                avatar: "https://ui-avatars.com/api/?name=Alicia+Salcedo+Libreros&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 83,
+                name: "GIL MEJIA LIZBETH GUADALUPE",
+                department: "DIRECCION DE SERVICIOS ESCOLARES",
+                position: "GESTOR SEP",
+                startDate: new Date(2005, 1, 1),
+                avatar: "https://ui-avatars.com/api/?name=Lizbeth+Guadalupe+Gil+Mejia&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 84,
+                name: "BENITEZ GURRION HECTOR EMMANUEL",
+                department: "DIRECCION DE SERVICIOS ESCOLARES",
+                position: "COORDINADOR DE SERVICIOS ESCOLARES",
+                startDate: new Date(2007, 1, 7),
+                avatar: "https://ui-avatars.com/api/?name=Hector+Emmanuel+Benitez+Gurrion&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 85,
+                name: "GOMEZ HERNANDEZ SONIA VIRIDIANA",
+                department: "DIRECCION DE SERVICIOS ESCOLARES",
+                position: "COORDINADOR DE SERVICIOS ESCOLARES",
+                startDate: new Date(2009, 2, 23),
+                avatar: "https://ui-avatars.com/api/?name=Sonia+Viridiana+Gomez+Hernandez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 86,
+                name: "BALBAS MEDINA BRENDA LUZ",
+                department: "DIRECCION DE SERVICIOS ESCOLARES",
+                position: "COORDINADOR DE SERVICIOS ESCOLARES",
+                startDate: new Date(2013, 9, 30),
+                avatar: "https://ui-avatars.com/api/?name=Brenda+Luz+Balbas+Medina&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 87,
+                name: "DAVILA RUIZ CARMEN ADRIANA",
+                department: "DIRECCION DE SERVICIOS ESCOLARES",
+                position: "GESTOR SEP",
+                startDate: new Date(2021, 10, 10),
+                avatar: "https://ui-avatars.com/api/?name=Carmen+Adriana+Davila+Ruiz&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 88,
+                name: "RODRIGUEZ GOMEZ DAZA OSCAR GABRIEL",
+                department: "DIRECCION GENERAL CORPORATIVA",
+                position: "DIRECTOR GENERAL CORPORATIVO",
+                startDate: new Date(1990, 9, 23),
+                avatar: "https://ui-avatars.com/api/?name=Oscar+Gabriel+Rodriguez+Gomez+Daza&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 89,
+                name: "MOLINA VELAZQUEZ MIRIAM SUSANA",
+                department: "DIRECCION GENERAL CORPORATIVA",
+                position: "GERENTE DE INTELIGENCIA DE NEGOCIOS",
+                startDate: new Date(2006, 5, 5),
+                avatar: "https://ui-avatars.com/api/?name=Miriam+Susana+Molina+Velazquez&background=0033A0&color=fff&size=200",
+                joinStory: "Llegué a la Universidad de Londres en 2006, cuando tenía 25 años. En ese momento trabajaba en una consultoría de administración de proyectos, pero sentía que algo me faltaba. Había estudiado Ingeniería Cibernética y quería regresar a lo que me gustaba.\n\nUn día, sin mucha fe en que algo pasara, subí mi currículum a Computrabajo, y al día siguiente me llamaron de la UDL. Buscaban una asistente para la Dirección de Sistemas. Fui a la entrevista con Danny y lo primero que me pidió fue hacer unas etiquetas y una factura... yo quería aplicar mis conocimientos de ingeniería, no imprimir etiquetas je je je. No lo niego, me sentí un poquito ofendida... pero hice la prueba, y me quedé con el puesto.\n\nY aquí estoy, 19 años después. La UDL me ha visto crecer, aprender, equivocarme, reír, y reinventarme muchas veces. Aquí hice mi maestría, conocí gente valiosa, viví momentos importantes, y lo más bonito de todo: aquí encontré a mi mejor amigo del mundo mundial… Danny.\n\nGracias UDL, por todo lo que has sido para mí. Por lo que me has enseñado, por las puertas que me abriste, por las personas que pusiste en mi camino y por todo lo que aún está por venir.",
+                photos: [
+                    "https://i.postimg.cc/3Rm6ptFL/DSC01096.jpg",
+                    "https://i.postimg.cc/PqB9PgYp/IMG-9472.jpg",
+                    "https://i.postimg.cc/CLN3m6TX/Whats-App-Image-2025-08-01-at-10-19-56-AM.jpg",
+                    "https://i.postimg.cc/DwwtDd7Z/Whats-App-Image-2025-08-05-at-4-48-22-PM.jpg",
+                    "https://i.postimg.cc/R032CS6x/Whats-App-Image-2025-08-05-at-5-09-53-PM-1.jpg",
+                    "https://i.postimg.cc/nhS6tjL1/Whats-App-Image-2025-08-05-at-5-09-53-PM-2.jpg"
+                ]
+            },
+            {
+                id: 90,
+                name: "DELGADILLO SOLANO CYNTHIA OLIVIA",
+                department: "DIRECCION GENERAL DE ADMINISTRACION Y FINANZAS",
+                position: "DIRECTOR",
+                startDate: new Date(1997, 9, 1),
+                avatar: "https://ui-avatars.com/api/?name=Cynthia+Olivia+Delgadillo+Solano&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 91,
+                name: "MARTINEZ LOPEZ MARIA DEL PILAR GUADALUPE",
+                department: "DIRECCION GENERAL DE ADMINISTRACION Y FINANZAS",
+                position: "JEFE DE CONCILIACIONES Y PAGOS",
+                startDate: new Date(1997, 10, 13),
+                avatar: "https://ui-avatars.com/api/?name=Maria+Del+Pilar+Guadalupe+Martinez+Lopez&background=0033A0&color=fff&size=200",
+                joinStory: "Fue en el 14 de noviembre del año de 1997 cuando ingrese como cajera a CEUL en ese entonces sólo existía la caja del plantel Querétaro y solo contábamos con dos planteles LC y Qro. En ese entonces el flujo de efectivo era el 90% de la cobranza, casi nadie pagaba con tarjetas de crédito y menos de débito....quizás alguno que otro cheque. \n\nEn ese tiempo sólo existían 5 carreras y cada una comenzaban con un número diferente de acuerdo cómo fueron apareciendo si no mal recuerdo eran así: \n\nAdministración 1\n\nContabilidad 2\n\nInformática 3\n\nDerecho 4\n\nPsicología 5\n\nNo contábamos con cámaras de vigilancia y menos con alarmas sísmicas. \n\nDesde que llegué a la universidad mágicamente los alumnos nunca envejecen y eso nos da juventud y alegría sin lugar a dudas.",
+                photos: [
+                    "https://i.postimg.cc/QMK4DRcV/88c1f9f7-1efb-47e8-9b66-24c381336e5b-topaz-face-denoise-upscale-3-1x.jpg"
+                ]
+            },
+            {
+                id: 92,
+                name: "TEJEDA RODRIGUEZ PATRICIA",
+                department: "DIRECCION GENERAL DE ADMINISTRACION Y FINANZAS",
+                position: "ASISTENTE",
+                startDate: new Date(2000, 9, 1),
+                avatar: "https://ui-avatars.com/api/?name=Patricia+Tejeda+Rodriguez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 93,
+                name: "GONZALEZ VERA EDMUNDO",
+                department: "DIRECCION GENERAL DE ADMINISTRACION Y FINANZAS",
+                position: "ANALISTA",
+                startDate: new Date(2013, 7, 12),
+                avatar: "https://ui-avatars.com/api/?name=Edmundo+Gonzalez+Vera&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 94,
+                name: "ALBINO SANCHEZ MIGUEL ANGEL",
+                department: "DIRECCION TECNICA PREPARATORIA",
+                position: "LABORATORISTA",
+                startDate: new Date(2001, 8, 16),
+                avatar: "https://ui-avatars.com/api/?name=Miguel+Angel+Albino+Sanchez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 95,
+                name: "MARTINEZ ROSAS ELVIRA",
+                department: "DIRECCION TECNICA PREPARATORIA",
+                position: "DIRECTOR",
+                startDate: new Date(2011, 6, 19),
+                avatar: "https://ui-avatars.com/api/?name=Elvira+Martinez+Rosas&background=0033A0&color=fff&size=200",
+                joinStory: "Mi primer encuentro con la Universidad de Londres fue justo el día en que vine a pedir trabajo. Venía a una entrevista para dar clases en la licenciatura en Derecho los fines de semana, y me recibiría el licenciado Jesús Heredia, que en ese momento era director técnico de la prepa y también dirigía las licenciaturas ejecutivas.\n\nMe hicieron esperar un ratito en la biblioteca y, desde ahí, empecé a sentir algo especial. Vi a varios estudiantes trabajando en equipo, hojeando libros, con esa energía intensa que tienen cuando están metidos de lleno en un proyecto. Había movimiento, entusiasmo, muchas ideas circulando. Me llamó la atención el ambiente: se notaba que ahí pasaban cosas importantes.\n\nLuego fue por mí la asistente del licenciado Heredia y me llevó a la dirección. Mientras caminábamos, no pude evitar notar lo limpio que estaba todo. De verdad, el plantel brillaba, literal. Las paredes blancas relucían y todo se sentía muy cuidado. Me sorprendió mucho esa mezcla: por un lado, el bullicio y la vida de la biblioteca; por el otro, la tranquilidad y el orden de los pasillos. Fue una primera impresión muy bonita.\n\nNunca imaginé que ese primer paso se convertiría en un camino tan largo y tan valioso en mi vida. Pero desde ese día, sentí que este lugar tenía algo especial. Y no me equivoqué.\n\nHoy, al celebrar 45 años de historia, me siento profundamente agradecida y orgullosa de formar parte de esta gran institución.",
+                photos: [
+                    "https://i.postimg.cc/155w2MYb/DSC-0020.jpg"
+                ]
+            },
+            {
+                id: 96,
+                name: "RAMIREZ AYAR JULIETA",
+                department: "DIRECCION TECNICA PREPARATORIA",
+                position: "COORDINADOR PSICOPEDAGOGICO",
+                startDate: new Date(2018, 9, 3),
+                avatar: "https://ui-avatars.com/api/?name=Julieta+Ramirez+Ayar&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 97,
+                name: "MARTINEZ PINEDA AHTZIRI VANESSA",
+                department: "DIRECCION TECNICA PREPARATORIA",
+                position: "PARAMEDICO",
+                startDate: new Date(2024, 7, 1),
+                avatar: "https://ui-avatars.com/api/?name=Ahtziri+Vanessa+Martinez+Pineda&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 98,
+                name: "VERGARA SANTANA LETICIA JUANA",
+                department: "DIRECCION TECNICA PREPARATORIA",
+                position: "COORDINADOR DE DISCIPLINA",
+                startDate: new Date(2024, 10, 4),
+                avatar: "https://ui-avatars.com/api/?name=Leticia+Juana+Vergara+Santana&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 99,
+                name: "LEON QUINTANA NALLELY",
+                department: "DIRECCION TECNICA PREPARATORIA",
+                position: "COORDINADOR ACADEMICO",
+                startDate: new Date(2024, 10, 14),
+                avatar: "https://ui-avatars.com/api/?name=Nallely+Leon+Quintana&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 100,
+                name: "BRAVO GONZALEZ RUPERTINA MARCELA",
+                department: "DIRECCION TECNICA PREPARATORIA",
+                position: "COORDINADOR DE DISCIPLINA",
+                startDate: new Date(2025, 0, 8),
+                avatar: "https://ui-avatars.com/api/?name=Rupertina+Marcela+Bravo+Gonzalez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 101,
+                name: "ESCOBAR HERNANDEZ ROSA MARIA",
+                department: "DIRECCION TECNICA PREPARATORIA",
+                position: "TUTOR",
+                startDate: new Date(2025, 1, 10),
+                avatar: "https://ui-avatars.com/api/?name=Rosa+Maria+Escobar+Hernandez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 102,
+                name: "ROJAS MORENO GUADALUPE",
+                department: "DIRECCION TECNICA PREPARATORIA",
+                position: "COORDINADOR DE SERVICIOS ESCOLARES",
+                startDate: new Date(2025, 1, 25),
+                avatar: "https://ui-avatars.com/api/?name=Guadalupe+Rojas+Moreno&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 103,
+                name: "LLAMAS LOPEZ MONTSERRAT",
+                department: "DIRECCION TECNICA PREPARATORIA",
+                position: "ORIENTADOR PSICOPEDAGOGICO",
+                startDate: new Date(2025, 2, 24),
+                avatar: "https://ui-avatars.com/api/?name=Montserrat+Llamas+Lopez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 104,
+                name: "VAZQUEZ GARCIA TAURO ULISES",
+                department: "ESCUELA DE COMUNICACION Y DISEÑO GRAFICO",
+                position: "LABORATORISTA MULTIMEDIA",
+                startDate: new Date(2007, 4, 31),
+                avatar: "https://ui-avatars.com/api/?name=Tauro+Ulises+Vazquez+Garcia&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 105,
+                name: "VAZQUEZ BARAJAS CLAUDIA BEATRIZ",
+                department: "ESCUELA DE COMUNICACION Y DISEÑO GRAFICO",
+                position: "DIRECTOR DE LICENCIATURA",
+                startDate: new Date(2019, 3, 29),
+                avatar: "https://ui-avatars.com/api/?name=Claudia+Beatriz+Vazquez+Barajas&background=0033A0&color=fff&size=200",
+                joinStory: "Que fue maravilloso el recibimiento que tuve en la UDL, desde la entrevista Oscar me recibió con mucha amabilidad, profesionalismo y empatía, me presento en ese mismo momento a Carmen Zaragoza y desde ya me sentí como en casa y fue aún mejor cuando me dijo bienvenida al equipo de directores, y con gran orgullo me hicieron sentir parte de este magnífico proyecto que es la Universidad de Londres.",
+                photos: [
+                    "https://i.postimg.cc/QMWcxwjy/8-C00-EBAB-AF0-D-4-B10-87-EC-9-E3-E4-A77-CA5-A.png",
+                    "https://i.postimg.cc/Jz0bStvm/IMG-9408.jpg"
+                ]
+            },
+            {
+                id: 106,
+                name: "VAZQUEZ LOPEZ ANDRES",
+                department: "ESCUELA DE NEGOCIOS",
+                position: "DIRECTOR DE LICENCIATURA",
+                startDate: new Date(2004, 8, 6),
+                avatar: "https://ui-avatars.com/api/?name=Andres+Vazquez+Lopez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 107,
+                name: "CEBALLOS IBARRA GRECIA",
+                department: "ESCUELA DE NEGOCIOS",
+                position: "ASISTENTE",
+                startDate: new Date(2025, 3, 28),
+                avatar: "https://ui-avatars.com/api/?name=Grecia+Ceballos+Ibarra&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 108,
+                name: "GUTIERREZ STREMPLER JOSE LUIS",
+                department: "GERENCIA DE REMUNERACIONES",
+                position: "JEFE",
+                startDate: new Date(1991, 2, 1),
+                avatar: "https://ui-avatars.com/api/?name=Jose+Luis+Gutierrez+Strempler&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 109,
+                name: "SALCEDO VILLALOBOS GABRIELA",
+                department: "GERENCIA DE REMUNERACIONES",
+                position: "GERENTE",
+                startDate: new Date(2002, 9, 1),
+                avatar: "https://ui-avatars.com/api/?name=Gabriela+Salcedo+Villalobos&background=0033A0&color=fff&size=200",
+                joinStory: "Llegué el 2 de octubre de 2002, después de un proceso de selección que jamás olvidaré: más de 50 personas reunidas en la biblioteca del plantel Luis Cabrera compitiendo por una sola vacante, la de Responsable de Nóminas. Fui la elegida, y sin saberlo entonces, ese día iniciaba no solo una nueva etapa profesional, sino también un nuevo capítulo en mi vida.\n\nEn aquel entonces la institución se llamaba CEUL (Centro de Estudios Londres), y a diferencia de todos mis trabajos anteriores, aquí encontré algo más que un empleo: encontré un refugio. Venía de un proceso personal muy doloroso, un divorcio complicado y una bebé de apenas un año en mis brazos. La institución no solo me abrió las puertas, me arropó, me protegió y me ayudó a reconstruirme. Gracias a su apoyo, pude estudiar la Maestría en Finanzas, como parte de la primera generación. Y un dato curioso: si algún día abres el primer libro de actas… el acta número uno lleva mi nombre.\n\nHoy soy Gerente de Remuneraciones, y sigo sintiendo lo mismo cada mañana: la emoción de llegar a mi segunda casa. El tiempo aquí vuela —quizás porque amo lo que hago y me comprometo con cada empleado que toca a mi puerta (virtual o física). Me esfuerzo por resolver cualquier asunto en máximo 24 horas, porque sé lo importante que es sentirse escuchado y respaldado.\n\nLa pandemia nos cambió la forma de trabajar, pero no el lazo que nos une. Cuando enfermé de COVID, viví en carne propia el valor humano de esta Universidad: me cuidaron, me enviaron medicinas, comida, compañía… nunca estuve sola.\n\nHoy, en su 45 aniversario, levanto la voz y el corazón para decir: Gracias, Universidad de Londres. Brindo por muchos años más de historias compartidas, de aprendizajes y de humanidad.\n\nPorque no solo formamos profesionales, también transformamos vidas.\n\nLa mía, sin duda, es una de ellas.",
+                photos: [
+                    "https://i.postimg.cc/VNYcYQ9Y/GABYS-2002.jpg",
+                    "https://i.postimg.cc/NMFqH6PS/GABYS-2003.jpg",
+                    "https://i.postimg.cc/tg2GJSDF/GABYS-2004.jpg",
+                    "https://i.postimg.cc/L8kpK61C/GABYS-2005.jpg"
+                ]
+            },
+            {
+                id: 110,
+                name: "CHAVEZ ESPINOZA MAYRA ENEDINA",
+                department: "GERENCIA DE REMUNERACIONES",
+                position: "ANALISTA",
+                startDate: new Date(2018, 4, 4),
+                avatar: "https://ui-avatars.com/api/?name=Mayra+Enedina+Chavez+Espinoza&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 111,
+                name: "REDE MARTINEZ OBDULIA",
+                department: "LIC. EN ACTUACION",
+                position: "DIRECTOR DE LICENCIATURA",
+                startDate: new Date(2011, 8, 12),
+                avatar: "https://ui-avatars.com/api/?name=Obdulia+Rede+Martinez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 112,
+                name: "ALVAREZ MONTERREY EMMANUEL ISAIAS",
+                department: "LIC. EN ACTUACION",
+                position: "TECNICO ESCENICO",
+                startDate: new Date(2016, 1, 2),
+                avatar: "https://ui-avatars.com/api/?name=Emmanuel+Isaias+Alvarez+Monterrey&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 113,
+                name: "GARCIA ARROYO BALBINA",
+                department: "LIC. EN ACTUACION",
+                position: "ASISTENTE",
+                startDate: new Date(2022, 0, 19),
+                avatar: "https://ui-avatars.com/api/?name=Balbina+Garcia+Arroyo&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 114,
+                name: "BASILIO RODRIGUEZ LUIS FELIPE",
+                department: "LIC. EN ACTUACION",
+                position: "LABORATORISTA MULTIMEDIA",
+                startDate: new Date(2023, 2, 13),
+                avatar: "https://ui-avatars.com/api/?name=Luis+Felipe+Basilio+Rodriguez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 115,
+                name: "AGUILAR CORTES MIROSLAVA ARACELY",
+                department: "LIC. EN CREACION Y GESTION DE EMPRESAS TURISTICAS",
+                position: "DIRECTOR DE LICENCIATURA",
+                startDate: new Date(2001, 7, 16),
+                avatar: "https://ui-avatars.com/api/?name=Miroslava+Aracely+Aguilar+Cortes&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 116,
+                name: "PEREZ CAMACHO ELIZABETH",
+                department: "LIC. EN DERECHO",
+                position: "DIRECTOR DE LICENCIATURA",
+                startDate: new Date(2012, 3, 23),
+                avatar: "https://ui-avatars.com/api/?name=Elizabeth+Perez+Camacho&background=D50032&color=fff&size=200",
+                joinStory: "En abril del 2012, a punto de tomar la decisión de tomar un año sabático porque deseaba embarazarme de nuevo, recibí una llamada por parte del área de recursos humanos de la UDL,  para preguntarme si me interesaba una vacante que tenían en la Dirección de Derecho y que buscaban  cubrir de forma inmediata. \n\nAunque mis planes eran otros, algo me decía que no debía rechazar la oportunidad y acepte acudir a las entrevistas. \n\nHoy puedo decir que desde el primer día que me incorpore a esta gran familia, me he sentido muy a gusto;  cabe señalar que a la semana siguiente de que llegué a la UDL, llegaron los evaluadores de FIMPES  y recuerdo que pese a la tensión que generaba que nos estuvieran evaluando como Universidad,  se organizó una cena para ellos con todos los directores y una de las mejores impresiones que tuve en esa ocasión, fue el escuchar a  varios  directores decir que tenían ya más de 15 o 20 años de antigüedad; lo cual gratamente me sorprendió y me  generó una gran satisfacción de saber que me había integrado a un gran equipo de trabajo, porque por algo  la mayoría tenían ya muchos años laborando. \n\nAdemás he de reconocer que  me encontré con un excelente grupo de docentes y grandes compañeros directores. \n\nLo único lamentable fue que mi ingreso a la UDL se dio por el lamentable deceso del anterior director el Maestro Amado Padilla, a quien sin saber, había conocido en reuniones de la ANFADE tiempo atrás."
+            },
+            {
+                id: 117,
+                name: "OLVERA SOLIS SONIA MARIA",
+                department: "LIC. EN DERECHO",
+                position: "ASISTENTE",
+                startDate: new Date(2013, 0, 21),
+                avatar: "https://ui-avatars.com/api/?name=Sonia+Maria+Olvera+Solis&background=0033A0&color=fff&size=200",
+                joinStory: "Tenía tanta ilusión de trabajar con jóvenes, que me sentía muy emocionada, era una nueva aventura y me ilusionaba mucho tener esa oportunidad. Me habían comentado que había dos tipos de personas que entraban a trabajar a la UDL, los que duraban muchos muchos años y los que NO duraban muchos. Y soy de las que si duraron muchos muchos años, GRACIAS UDL!!!!",
+                photos: [
+                    "https://i.postimg.cc/PJySXDK5/sonia-nueva.jpg"
+                ]
+            },
+            {
+                id: 118,
+                name: "GUERRA LOPEZ LILIANA",
+                department: "LIC. EN DISEÑO DE MODAS",
+                position: "ASISTENTE",
+                startDate: new Date(2016, 8, 14),
+                avatar: "https://ui-avatars.com/api/?name=Liliana+Guerra+Lopez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 119,
+                name: "VERDEJA APARTADO PATRICIA",
+                department: "LIC. EN DISEÑO DE MODAS",
+                position: "DIRECTOR DE LICENCIATURA",
+                startDate: new Date(2020, 1, 19),
+                avatar: "https://ui-avatars.com/api/?name=Patricia+Verdeja+Apartado&background=0033A0&color=fff&size=200",
+                joinStory: "Ingresé a la Universidad de Londres, a finales de febrero de 2020, las primeras semanas fueron de capacitación y a las tres semanas de ingresar, nos mandaron a clases en línea debido a la pandemia, desafortunadamente no había conocido a la mayoría de mis compañeros de trabajo, ni de las áreas con las cuales iba a trabajar, lo cual fue muy difícil en un inicio debido a que también mi asistente estaba embarazada y se encontraba en reposo absoluto, y posteriormente se fue a incapacidad, yo no contaba con el conocimiento de ningún proceso, por lo cual para mí fue un reto sumamente grande el ingresar a la universidad en estas circunstancias. Afortunadamente, con el paso del tiempo, tanto los alumnos como docentes, nos fuimos adaptando poco a poco a la nueva normalidad y todo salió muy bien y logré forjar una linda amistad con muchas compañeras de trabajo, ya que me apoyaron mucho en todos los procesos de mi ingreso, al paso del tiempo, poco a poco nos fuimos integrando a la presencialidad y aunque parezca increíble, por fin conocí físicamente a muchos de mis compañeros jajaja, ya que a muchos solo los conocía por zoom.\n\nTambién recuerdo con mucho cariño el viaje que realizamos a Argentina con la maestra Carmen y algunos alumnos de modas, al día de hoy no puedo creer que ya pasaron cinco años de mi ingreso y que hayamos logrado forjar una carrera tan sólida y exitosa, como es la carrera de modas.",
+                photos: [
+                    "https://i.postimg.cc/L4rtGHRZ/33-A05796-7-D38-4478-A8-D5-09-A7-AAED3675.jpg",
+                    "https://i.postimg.cc/CMZCvZyg/626-B86-E2-78-F5-4782-B546-36-AE98-B227-B1.avif",
+                    "https://i.postimg.cc/MKV7ShK3/979-FB5-CE-D6-DE-4597-9-B1-E-78-F26683-EEC8.avif",
+                    "https://i.postimg.cc/T3cnygbr/A0-C529-EA-4-A77-4-E96-A538-6-A5-E95460869.avif",
+                    "https://i.postimg.cc/6pKd5Y8W/E63-E8754-5-A3-F-49-A1-B841-9684925-C98-F9.avif"
+                ]
+            },
+            {
+                id: 120,
+                name: "HEREDIA APARICIO JESUS",
+                department: "LIC. EN FIN DE SEMANA",
+                position: "DIRECTOR DE LICENCIATURA",
+                startDate: new Date(1997, 5, 2),
+                avatar: "https://ui-avatars.com/api/?name=Jesus+Heredia+Aparicio&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 121,
+                name: "ROMERO PEÑA MICHELLE ALEJANDRA",
+                department: "LIC. EN FIN DE SEMANA",
+                position: "ASISTENTE",
+                startDate: new Date(2019, 4, 16),
+                avatar: "https://ui-avatars.com/api/?name=Michelle+Alejandra+Romero+Peña&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 122,
+                name: "PONCE PEREZ BRENDA",
+                department: "LIC. EN FIN DE SEMANA",
+                position: "RESPONSABLE DE EVALUACION",
+                startDate: new Date(2024, 10, 7),
+                avatar: "https://ui-avatars.com/api/?name=Brenda+Ponce+Perez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 123,
+                name: "ESPINOSA CASTELAN JOSUE ISRAEL",
+                department: "LIC. EN GASTRONOMIA",
+                position: "DIRECTOR DE LICENCIATURA",
+                startDate: new Date(2005, 8, 5),
+                avatar: "https://ui-avatars.com/api/?name=Josue+Israel+Espinosa+Castelan&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 124,
+                name: "RODRIGUEZ AGUILAR ALEJANDRO",
+                department: "LIC. EN GASTRONOMIA",
+                position: "COORDINADOR ACADEMICO DE LICENCIATURA",
+                startDate: new Date(2012, 7, 6),
+                avatar: "https://ui-avatars.com/api/?name=Alejandro+Rodriguez+Aguilar&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 125,
+                name: "VILLAGOMEZ AMEZCUA MARIA DEL CARMEN",
+                department: "LIC. EN NUTRICION",
+                position: "DIRECTOR DE LICENCIATURA",
+                startDate: new Date(2016, 3, 19),
+                avatar: "https://ui-avatars.com/api/?name=Maria+Del+Carmen+Villagomez+Amezcua&background=0033A0&color=fff&size=200",
+                joinStory: "Mis primeros días en la UDL y lo anecdótico es que me llamó la atención que me hicieran por primera vez en mi vida laboral, un estudio socioeconómico para poder ingresar a la UDL y fueran a sacar fotos de mi casa, fue una nueva experiencia que me llamó mucho la atención.",
+                photos: [
+                    "https://i.postimg.cc/hjvvt78P/maria-del-carmen-villagomez-014.jpg"
+                ]
+            },
+            {
+                id: 126,
+                name: "BUSTOS GARCIA JUAN ROBERTO ISRAEL",
+                department: "LIC. EN NUTRICION",
+                position: "RESPONSABLE DE LABORATORIOS",
+                startDate: new Date(2016, 9, 26),
+                avatar: "https://ui-avatars.com/api/?name=Juan+Roberto+Israel+Bustos+Garcia&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 127,
+                name: "HERNANDEZ REYES CATALINA",
+                department: "LIC. EN NUTRICION",
+                position: "COORDINADOR ACADEMICO DE LICENCIATURA",
+                startDate: new Date(2024, 7, 19),
+                avatar: "https://ui-avatars.com/api/?name=Catalina+Hernandez+Reyes&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 128,
+                name: "DE LA VEGA Y VEGA MARIA CRISTINA GABRIELA",
+                department: "RECTORIA",
+                position: "RECTORA",
+                startDate: new Date(1980, 7, 25),
+                avatar: "https://ui-avatars.com/api/?name=Maria+Cristina+Gabriela+De+La+Vega+Y+Vega&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 129,
+                name: "VEGA LOPEZ GABRIELA",
+                department: "PSICOLOGIA Y DESARROLLO ESTUDIANTIL",
+                position: "JEFE",
+                startDate: new Date(1991, 1, 1),
+                avatar: "https://ui-avatars.com/api/?name=Gabriela+Vega+Lopez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 130,
+                name: "VEGA LOPEZ RITA",
+                department: "PAGOS Y BECAS",
+                position: "JEFE",
+                startDate: new Date(1993, 8, 1),
+                avatar: "https://ui-avatars.com/api/?name=Rita+Vega+Lopez&background=D50032&color=fff&size=200",
+                joinStory: "Inicié mi camino en la Universidad de Londres en 1993, en el plantel de San Luis Potosí. Ahí comenzó una parte muy importante de mi vida. Me capacitaron como cajera, sin saber entonces que no solo estaba aprendiendo un trabajo, sino sembrando raíces profundas.\n\nAl poco tiempo, nos trasladamos al nuevo plantel de la calle Querétaro. No había computadoras, ni sistema de caja. Solo un corazón dispuesto y unas manos decididas. Cobrar a mano, entregar recibos y al final del día caminar junto a Óscar Rodríguez de regreso a San Luis Potosí para capturar todos los pagos en el sistema… era la rutina. Terminábamos muchas veces cerca de la medianoche. Pero nunca fue pesado. Había armonía, compañerismo… y el gesto amable de Óscar, llevándome a casa al final de cada jornada.\n\nEl plantel creció. Llegaron más estudiantes, llegó el sistema, llegó la computadora. Mi jornada se volvió más amable: de 7 de la mañana a 3 de la tarde. Pero durante mucho tiempo fui no solo cajera, también bibliotecaria y encargada de papelería. Todo en un mismo espacio, todo con la misma entrega.\n\nCon el tiempo, cada área encontró su lugar. Y yo también. Primero fui cajera, Jefa de Caja. Luego, Jefa de Cobranza. Y en diciembre de 2019, pasé al cargo que hoy tengo: Jefa de Pagos y Becas.\n\nHe visto llegar y partir a muchos estudiantes Los he visto crecer. Y mientras ellos crecían, yo también lo hacía. Como Esposa, Madre y mujer, como trabajadora, como profesionista, como persona, como parte de esta universidad que es más que un lugar: es una historia compartida.\n\nHe visto también a mis compañeros volverse familia. Algunos compartimos jornadas, decisiones, silencios… y muchos sueños.\n\nMi historia en esta universidad no solo está escrita en documentos o recibos. Está tejida con personas, con afecto, con gratitud. Y en cada jornada, en cada estudiante, en cada cambio… siempre ha habido algo hermoso: el sentido profundo de pertenecer. Orgullosamente soy UDL",
+                photos: [
+                    "https://i.postimg.cc/P56pTGN1/Whats-App-Image-2025-08-06-at-10-05-16-PM.jpg"
+                ]
+            },
+            {
+                id: 131,
+                name: "GOMEZ RIVAS ERIKA TANIA",
+                department: "LIC. EN PSICOLOGIA",
+                position: "DIRECTOR DE LICENCIATURA",
+                startDate: new Date(1995, 10, 25),
+                avatar: "https://ui-avatars.com/api/?name=Erika+Tania+Gomez+Rivas&background=0033A0&color=fff&size=200",
+                joinStory: "El 25 noviembre de 1995 ingresé a la Universidad de Londres, En ese entonces CEUL (Ese mismo día estaría naciendo el sobrino mayor de Ale Espinosa mejor conocido como el Bebé Diego. Quien seguro está por cumplir 30 años)\n\nEl 1er puesto que ocupé fue el de recepcionista durante 9 meses en el plantel Luis Cabrera aunque estuve durante una semana en capacitación en el plantel Querétaro. Ahí estuve a cargo de los informes y las inscripciones de las 5 carreras que en ese entonces se impartían; recuerdo que cuando recién ingresé a CEUL (llamado asi en ese entonces) la Lic en Psicologia acababa de recibir el RVOE noticia que recuerdo era motivo de felicidad entre todo el personal.\n\nParticipé en todas la Ferias Universitarias que se hacían la plaza de las Estrellas para la captación de alumnos de nuevo ingreso. Como la recepción estaba en la misma oficina de Control escolares (asi se llamaba en ese entonces). también era encargada de la renovación becas de todos los estudiantes, entrega de horarios a docentes y estudiantes, entrega de boletas de calificaciones y actas de calificaciones a docentes, dar informes e inscripciones personal y telefónicamente. Cubrí eventos culturales presentaciones de libros y exposiciones de pintura y escultura de Miss Gaby como anfitriona.\n\nEn ese entonces la Universidad era tan pequeña que los que éramos el personal administrativo cada inicio de semestre pintábamos salones, arreglábamos bancas, restaurábamos pizarrones para dar la bienvenida a las nuevas generaciones que entrarían.\n\nPosteriormente pasé a ser asistente de la Dirección General, puesto que ocupé durante 4 años, y donde aprendí del Mtro Oscar muchas cosas sobre como dirigir, como resolver problemas y conflictos que enfrenta una Universidad ahí realizaba horarios, algo de nómina, docente y administrativa, atendía la agenda de la Dirección General, con el paso del tiempo ya atendía yo alumnos y Mtros y hacía mis pininos en la resolución de algunos conflictos pues aprendí hacerlo con las enseñanzas del Mtro Oscar. En ese entonces se organizaba una sola Graduación Académica para todas las carreras y en conjunto con la asistente de Ale Espinosa y yo organizábamos toda la graduación bajo la Dirección de Ale.\n\nEn esos 4 años La universidad de Londres me dio el regalo más grande que se le puede dar a un ser humano, la oportunidad de estudiar una carrera y estudié la carrera de psicología, por lo que con el corazón agradezco tal oportunidad pues, en carne propia pude constatar que el mejor camino para la evolución humana es el estudio. Esta transformación personal y académica me dio la gran oportunidad de formar parte del departamento de Psicología llamado asi en ese entonces con el puesto de Psicólogo Orientador.\n\nAhí hacia perfiles vocacionales, entrevistas de ingreso de estudiantes de todas las carreras, aplicación de baterías de evaluación psicológica y psicométrica para la construcción de integración de estudios y expedientes. Participe en mas de 20 cursos propedéuticos y tuve a mi cargo el programa de Servicio Social interno. Participé en el reclutamiento y selección de la planta becaria para los diferentes departamentos de la Universidad.\n\nGracias la psicóloga Gabriela Vega conocí la profundidad de la psicología y sus alcances pues aun siendo estudiante tuve la oportunidad antes que todos mis compañeros de generación trabajar en el ramo de la psicología en un escenario real de la psicología educativa, esto me ayudó a desarrollar muchas habilidades de intervención en está rama.\n\nTranscurridos los años llegó el 2002 cuando fui convocada para fundar y crear un departamento llamo Servicios a la Comunidad, el cual buscaba atender una necesidad que toda Universidad de prestigio debe tener. Servicios a la Comunidad trabajaba bajo un eje rector; dar un espacio de práctica extramuros en escenarios reales a nuestros estudiantes con necesidades de nuestra comunidad dando origen a los siguientes servicios: Despacho jurídico y Contable. Clínica de Atención Psicológica, programa que formaba a los chicos con las bases para la intervención clínica principalmente en niños y adolescentes. Este proyecto dio origen a los más de 10 cursos de verano y decembrinos que se desarrollaron. También estaba el programa de Cursos de capación en informática básica. Asesores a Mircoempresarios que posteriormente se convertiría en Incubadora empresarial. Proyecto que se trabajó con la Secretaría de Economía siendo semillero de microempresarios Con Tv Azteca se trabajó labor social en donaciones y asesorías gratuitas. Ahí nació la primera botarga y mascota de la UDL bautizado como \"Leonardo\". Tambien en Servicios a la Comunidad nació el primer programa de radio UDL.\n\nSer jefe de este departamento apuntaló en mi, muchas competencias; era la primera vez que yo tenía a mi cargo mucha gente y con la responsabilidad ética de muchos estudiantes. Servicios a la Comunidad fue considerado el primer espacio de practicas extramuros para nuestros estudiantes Ahí al ser la responsable y fundadora del área se creo de 0 todos los documentos que darían estructura y funcionamiento al departamento. Se creo los estatutos, reglamentos, y programas de servicios. Este departamento sembró en mi corazón el genuino amor a los estudiantes porque logré tocar de cerca la transformación que tiene un ser humano cuando empieza a ser profesionista, logré ver en los ojos de cada chico que pasó por ahí un profundo deseo de aprender y de servir de forma desinteresada a su comunidad. Trabajé con más 800 practicantes de todas las carreras y codo a codo trabajé con los coordinadores de programa que eran maestros de nuestra Universidad en la formación de competencias profesionales y personales de estos jóvenes, porque en Servicios a la Comunidad nos aseguramos que no solo fueran profesionistas de calidad, si no que también fueran seres humanos íntegros, responsables y buenas personas, pues como filosofía personal siempre he creído que de nada sirve ser un buen profesionista si no se es primero un buen ser humano. Con este gran equipo de trabajo se logró impactar de forma benéfica en todos sus programas a nuestra comunidad de la Roma pero también de sus alrededores. Servicios a la Comunidad ha sido en mi trayectoria profesional donde mi corazón ha sido inmensamente feliz.\n\nPara el año del 2010 me estaba titulando de la Maestría en Innovación Educativa cuando fui invitada a tomar la Dirección de la Licenciatura en Psicologia una experiencia que me ha hecho crecer en muchos sentidos. A mi llegada a la Dirección me encontré con una escuela muy sólida en conocimientos pero muy desarticulada en compañerismo y respeto entre docentes y estudiantes. Creo que la Dirección de carrera puso a prueba en mi, muchas cosas pues llegue a dirigir a profesores que en su momento habían sido mis propios profesores o hasta mis compañeros de aula durante mi carrera, esto lo hizo complicado porque ganarse un lugar de liderazgo ante algunas personalidades fue muy difícil aunque no imposible. Poco a poco y con tranquilidad observe que pasaba y entendí que la licenciatura por su naturaleza requería un líder que tuviera la capacidad de escuchar a las personas, darles un espacio para expresar lo que les preocupaba tanto como docentes s y estudiantes. Una de las guerras campales con las que me encontré fue con la lucha por el posicionamiento de los enfoques terapéuticos por lo que decidí implementar un espacio donde se promoviera la capacidad de discernimiento personal, habilidad esperada de un Universitario, Como pensamiento central se promovió que todos los estudiantes de psicología estudiaran todas las áreas de esta, asi como todos los enfoques psicoterapéuticos con la intención de promover en el estudiante la capacidad de discernir bajo su libre albedrio aquello que le atrae de la psicología y no bajo un pensamiento a doctrinante, pues siempre he confiado que la UDL forma seres pensantes no robots. Es asi que mediante eventos académicos llamados semana de la Psicología, Dia del Psicólogo etc y la administración y dosificación del plan de estudios se le ha presentado al estudiante todas las posibilidades de trabajo que abarca la psicología que son muchas. Escuelas, empresas, hospitales, clínicas de sueño, IAP, en fin decir psicología no solo es el trabajo de consultorio con un solo enfoque, la psicología es muy amplia y durante esta gestión se ha trabajado mucho por mostrar a estas generaciones que nuestra escuela forma en ellos las competencias necesarias para intervenir psicológicamente por el bienestar de nuestra sociedad en cualquier ámbito. Como ventaja competitiva nuestra escuela de Psicologia egresa Psicolog@s con competencias sólidas en todas sus áreas.\n\nEse año nuestra escuela de Psicologia se encuentra celebrando 30 años de formar brillantes psicólogos que han dejado huella en la sociedad, en la vida de las personas que han tocado y desde luego en nuestra Universidad. Es un lugar que a puesto prueba muchas cosas en mi y he de confesar que he amado profundamente mi labor en esta Dirección porque no hay nada más bello que ser testigo de la transformación de un ser humano y en 15 años al frente de la carrera he tenido la dicha y el privilegio de ver 30 generaciones transformarse no solo en profesionistas también en mejores personas.\n\nAsí nuestra querida universidad cumple 45 años de existencia y eso es gracias a que no es cualquier escuela, es una Universidad que late con enorme corazón propio.\n\nGracias por tanto y por todo Universidad de Londres felices 45 años",
+                photos: [
+                    "https://i.postimg.cc/YjK5JYXD/1er-credencial-oficial-CEUL-topaz-face-text-upscale-4x.jpg",
+                    "https://i.postimg.cc/8k2s1Y99/2da-generaci-n-de-Psicologia-turno-VEspertino-topaz-face-upscale-3-8x.jpg",
+                    "https://i.postimg.cc/G38HnR7v/Dra-Ivonne-Winner-topaz-face-upscale-3-8x.jpg",
+                    "https://i.postimg.cc/cHjyBVfS/Museo-de-Historia-Natural-1era-graduaci-n-acad-mica-topaz-sharpen-face-upscale-3-8x.jpg"
+                ]
+            },
+            {
+                id: 132,
+                name: "MUÑOZ VELA MARCO ANTONIO",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(1998, 7, 7),
+                avatar: "https://ui-avatars.com/api/?name=Marco+Antonio+Muñoz+Vela&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 133,
+                name: "SANCHEZ JASSEN SANDRA AMIRA",
+                department: "RECTORIA",
+                position: "ASISTENTE",
+                startDate: new Date(2002, 0, 21),
+                avatar: "https://ui-avatars.com/api/?name=Sandra+Amira+Sanchez+Jassen&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 134,
+                name: "GABI CAMPOS ENRIQUE GABRIEL",
+                department: "SERVICIOS GENERALES",
+                position: "SUPERVISOR DE MANTENIMIENTO",
+                startDate: new Date(2003, 10, 16),
+                avatar: "https://ui-avatars.com/api/?name=Enrique+Gabriel+Gabi+Campos&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 135,
+                name: "GUERRERO RUIZ EDUARDO IGNACIO",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE MANTENIMIENTO",
+                startDate: new Date(2004, 0, 31),
+                avatar: "https://ui-avatars.com/api/?name=Eduardo+Ignacio+Guerrero+Ruiz&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 136,
+                name: "MAYA GARCIA RAQUEL",
+                department: "SERVICIOS GENERALES",
+                position: "ASISTENTE",
+                startDate: new Date(2004, 9, 30),
+                avatar: "https://ui-avatars.com/api/?name=Raquel+Maya+Garcia&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 137,
+                name: "LOPEZ DIAZ PATRICIA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2007, 5, 10),
+                avatar: "https://ui-avatars.com/api/?name=Patricia+Lopez+Diaz&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 138,
+                name: "GARCIA HUERTA RICARDO",
+                department: "SERVICIOS GENERALES",
+                position: "SUPERVISOR DE MANTENIMIENTO",
+                startDate: new Date(2007, 8, 6),
+                avatar: "https://ui-avatars.com/api/?name=Ricardo+Garcia+Huerta&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 139,
+                name: "ZAPATA CALDERON JOSE DANIEL",
+                department: "SERVICIOS GENERALES",
+                position: "COORDINADOR",
+                startDate: new Date(2007, 9, 29),
+                avatar: "https://ui-avatars.com/api/?name=Jose+Daniel+Zapata+Calderon&background=0033A0&color=fff&size=200",
+                joinStory: " ",
+                photos: [
+                    "https://i.postimg.cc/ZRFvBtgw/image0-topaz-face-upscale-3-7x.jpg",
+                    "https://i.postimg.cc/1tZN35Wg/image1-topaz-face-upscale-3-7x.jpg"
+                ]
+            },
+            {
+                id: 140,
+                name: "VAZQUEZ MELENDEZ ANGEL",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2010, 4, 17),
+                avatar: "https://ui-avatars.com/api/?name=Angel+Vazquez+Melendez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 141,
+                name: "MUÑOZ MARTINEZ MARIA ISABEL",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2010, 8, 27),
+                avatar: "https://ui-avatars.com/api/?name=Maria+Isabel+Muñoz+Martinez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 142,
+                name: "PEREZ CERON LUCIA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2011, 5, 2),
+                avatar: "https://ui-avatars.com/api/?name=Lucia+Perez+Ceron&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 143,
+                name: "BAUTISTA FELIPE ANA MARIA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2011, 6, 2),
+                avatar: "https://ui-avatars.com/api/?name=Ana+Maria+Bautista+Felipe&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 144,
+                name: "PINEDA HERRERA MOISES",
+                department: "RECTORIA",
+                position: "CHOFER",
+                startDate: new Date(2011, 9, 14),
+                avatar: "https://ui-avatars.com/api/?name=Moises+Pineda+Herrera&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 145,
+                name: "PONCE ESPINA RAYMUNDO ALFONSO",
+                department: "SERVICIOS GENERALES",
+                position: "SUPERVISOR DE MANTENIMIENTO",
+                startDate: new Date(2012, 1, 7),
+                avatar: "https://ui-avatars.com/api/?name=Raymundo+Alfonso+Ponce+Espina&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 146,
+                name: "HERNANDEZ GARCIA GUADALUPE",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2012, 3, 18),
+                avatar: "https://ui-avatars.com/api/?name=Guadalupe+Hernandez+Garcia&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 147,
+                name: "HERNANDEZ FERNANDEZ CLAUDIA GUADALUPE",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2012, 4, 2),
+                avatar: "https://ui-avatars.com/api/?name=Claudia+Guadalupe+Hernandez+Fernandez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 148,
+                name: "SANTILLAN GUTIERREZ JUAN",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE MANTENIMIENTO",
+                startDate: new Date(2012, 4, 17),
+                avatar: "https://ui-avatars.com/api/?name=Juan+Santillan+Gutierrez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 149,
+                name: "ANDRADE SANCHEZ ATALA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2012, 5, 7),
+                avatar: "https://ui-avatars.com/api/?name=Atala+Andrade+Sanchez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 150,
+                name: "GALICIA POLO MARIA ISABEL",
+                department: "LIC. EN TECNOLOGIAS DE LA INFORMACION",
+                position: "COORDINADOR ACADEMICO DE LICENCIATURA",
+                startDate: new Date(2012, 5, 27),
+                avatar: "https://ui-avatars.com/api/?name=Maria+Isabel+Galicia+Polo&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 151,
+                name: "ACEVEDO ROMERO MARCO ANTONIO",
+                department: "SERVICIOS GENERALES",
+                position: "SUPERVISOR DE MANTENIMIENTO",
+                startDate: new Date(2012, 6, 20),
+                avatar: "https://ui-avatars.com/api/?name=Marco+Antonio+Acevedo+Romero&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 152,
+                name: "LIRA GRANADOS CRISTINA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2012, 7, 24),
+                avatar: "https://ui-avatars.com/api/?name=Cristina+Lira+Granados&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 153,
+                name: "SANCHEZ CRUZ KARLA BERENICE",
+                department: "LIC. EN PSICOLOGIA",
+                position: "ASISTENTE",
+                startDate: new Date(2013, 4, 13),
+                avatar: "https://ui-avatars.com/api/?name=Karla+Berenice+Sanchez+Cruz&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 154,
+                name: "GARCIA ESPINOSA JOSE JOAQUIN",
+                department: "PSICOLOGIA Y DESARROLLO ESTUDIANTIL",
+                position: "ASESOR PSICOPEDAGOGICO",
+                startDate: new Date(2015, 7, 1),
+                avatar: "https://ui-avatars.com/api/?name=Jose+Joaquin+Garcia+Espinosa&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 155,
+                name: "ESPINOSA PONCE LUIS ENRIQUE",
+                department: "PSICOLOGIA Y DESARROLLO ESTUDIANTIL",
+                position: "ASESOR PSICOPEDAGOGICO",
+                startDate: new Date(2015, 7, 5),
+                avatar: "https://ui-avatars.com/api/?name=Luis+Enrique+Espinosa+Ponce&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 156,
+                name: "CRUZ LOPEZ ROSA MUNDA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2017, 2, 6),
+                avatar: "https://ui-avatars.com/api/?name=Rosa+Munda+Cruz+Lopez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 157,
+                name: "LAUREANO REYES ANGELA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2017, 5, 2),
+                avatar: "https://ui-avatars.com/api/?name=Angela+Laureano+Reyes&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 158,
+                name: "MORO ESQUIVEL TERESA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2017, 5, 19),
+                avatar: "https://ui-avatars.com/api/?name=Teresa+Moro+Esquivel&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 159,
+                name: "ROMERO HIDALGO GABRIELA NAYELI",
+                department: "PSICOLOGIA Y DESARROLLO ESTUDIANTIL",
+                position: "COORDINADOR",
+                startDate: new Date(2017, 7, 21),
+                avatar: "https://ui-avatars.com/api/?name=Gabriela+Nayeli+Romero+Hidalgo&background=0033A0&color=fff&size=200",
+                joinStory: "Hola, mi nombre es Ivette soy parte del equipo de coordinación administrativa de la carrera de gastronomía. \n\nLlevo 6 meses trabajando para la universidad los cuales han sido muy gratos ya que cada día se aprende algo nuevo, es un gusto trabajar para una universidad humana y con valores como la UDL. \n\nGracias por darme la oportunidad de ser parte de la institución. \n\nEsta es la foto de mi primer curso propedéutico, el cual pese a que no comparto afinidad con las técnicas, me dio la oportunidad de conocer a los alumnos de una forma distinta y sentir la convivencia y el verdadero trabajo en equipo. \n\nRecuerdo que cuando llegue a la Universidad yo conocía los planteles de Luis Cabrera y Vértiz y ambos me parecían muy bellos, y al formar parte de esta universidad me sentí muy orgullosa y contenta de estar dentro. \n\nHoy después de 8 años, de muchos cursos propedéuticos, me gusta saber que en cada nuevo curso habrá alumnos por conocer, por ayudar, por brindar mi servicio y por disfrutar la vitalidad que comparten con cada una de las personas que son de mi equipo. Me siento contenta con las personas que trabajo y que me han enseñado tanto y me han brindado su cariño y lealtad. \n\nMe quedó contenta con saber que mi trabajo ha valido la pena, con cada alumno que avanza, que entra a la Universidad y que termina sus estudios. \n\nMe siento contenta de haber vivido está experiencia hasta el día de hoy. \n\nGracias Udl y gracias Departamento de psicología y desarrollo estudiantil",
+                photos: [
+                    "https://i.postimg.cc/HsmBG20m/9c1de595-9263-4945-95d4-1d37fe0dac56-topaz-face-upscale-3-4x.jpg"
+                ]
+            },
+            {
+                id: 160,
+                name: "HUERTA MORALES ROCIO",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2018, 1, 8),
+                avatar: "https://ui-avatars.com/api/?name=Rocio+Huerta+Morales&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 161,
+                name: "MURCIA MARTINEZ ELMA REBECA",
+                department: "PSICOLOGIA Y DESARROLLO ESTUDIANTIL",
+                position: "COORDINADOR",
+                startDate: new Date(2019, 11, 2),
+                avatar: "https://ui-avatars.com/api/?name=Elma+Rebeca+Murcia+Martinez&background=0033A0&color=fff&size=200",
+                joinStory: "Estoy profundamente agradecida por la oportunidad de crecer profesionalmente y de coincidir con personas increíbles que han enriquecido mi vida con aprendizajes y momentos inolvidables. \n\nMi trayectoria aquí ha sido diversa: tres puestos, tres áreas distintas y tres líderes de grandes cualidades: Liz Torres, Pedro Omar Albino y Gaby Vega , quienes confiaron en mí y me permitieron formar parte de sus equipos. Podría escribir páginas enteras sobre sus cualidades y las de todos mis compañeros, colegas y amigos a quienes aprecio y admiro, pero, por el momento, me basta decir que son personas con valores, comprometidas con la justicia y con una gran ética profesional. \n\nJuntos hemos compartido logros y superado desafíos. Y me siento afortunada de decir que algunos de ellos se han convertido en grandes amigas y amigos, a quienes llevaré siempre en el corazón. ¡Gracias por permitirme ser parte de sus vidas! \n\nLa comunidad universitaria me ha dado mucho, tanto en lo profesional como en lo personal, y espero tener la oportunidad de retribuirlo.",
+                photos: [
+                    "https://i.postimg.cc/fTMp7ZrY/rebeca.jpg"
+                ]
+            },
+            {
+                id: 162,
+                name: "LOPEZ GONZALEZ MITZI",
+                department: "PSICOLOGIA Y DESARROLLO ESTUDIANTIL",
+                position: "ORIENTADOR PSICOPEDAGOGICO",
+                startDate: new Date(2021, 8, 21),
+                avatar: "https://ui-avatars.com/api/?name=Mitzi+Lopez+Gonzalez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 163,
+                name: "ALVAREZ GONZALEZ DIEGO EDMUNDO",
+                department: "PSICOLOGIA Y DESARROLLO ESTUDIANTIL",
+                position: "ORIENTADOR PSICOPEDAGOGICO",
+                startDate: new Date(2024, 7, 19),
+                avatar: "https://ui-avatars.com/api/?name=Diego+Edmundo+Alvarez+Gonzalez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 164,
+                name: "GARCIA CASTELLANOS ZYANYA ABRIL",
+                department: "PSICOLOGIA Y DESARROLLO ESTUDIANTIL",
+                position: "ORIENTADOR PSICOPEDAGOGICO",
+                startDate: new Date(2025, 6, 4),
+                avatar: "https://ui-avatars.com/api/?name=Zyanya+Abril+Garcia+Castellanos&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 165,
+                name: "CASTRO RENDON KAREN",
+                department: "PSICOLOGIA Y DESARROLLO ESTUDIANTIL",
+                position: "ORIENTADOR PSICOPEDAGOGICO",
+                startDate: new Date(2025, 6, 28),
+                avatar: "https://ui-avatars.com/api/?name=Karen+Castro+Rendon&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 166,
+                name: "MARTINEZ VIEYRA MARIA FERNANDA",
+                department: "PSICOLOGIA Y DESARROLLO ESTUDIANTIL",
+                position: "ORIENTADOR PSICOPEDAGOGICO",
+                startDate: new Date(2025, 6, 28),
+                avatar: "https://ui-avatars.com/api/?name=Maria+Fernanda+Martinez+Vieyra&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 167,
+                name: "MIRANDA CABALLERO BRENDA JANET",
+                department: "PSICOLOGIA Y DESARROLLO ESTUDIANTIL",
+                position: "ORIENTADOR PSICOPEDAGOGICO",
+                startDate: new Date(2025, 6, 28),
+                avatar: "https://ui-avatars.com/api/?name=Brenda+Janet+Miranda+Caballero&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 168,
+                name: "LOPEZ VELASCO FLORENCIO",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2018, 4, 17),
+                avatar: "https://ui-avatars.com/api/?name=Florencio+Lopez+Velasco&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 169,
+                name: "RODRIGUEZ AGUILAR FRANCISCO",
+                department: "SERVICIOS GENERALES",
+                position: "RESPONSABLE DE ALMACEN",
+                startDate: new Date(2018, 6, 25),
+                avatar: "https://ui-avatars.com/api/?name=Francisco+Rodriguez+Aguilar&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 170,
+                name: "RUIZ CAUDILLO MARIA GUADALUPE",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2019, 1, 18),
+                avatar: "https://ui-avatars.com/api/?name=Maria+Guadalupe+Ruiz+Caudillo&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 171,
+                name: "CORREA REYES RODRIGO",
+                department: "SERVICIOS GENERALES",
+                position: "ASESOR DE SEGURIDAD E HIGIENE",
+                startDate: new Date(2020, 6, 24),
+                avatar: "https://ui-avatars.com/api/?name=Rodrigo+Correa+Reyes&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 172,
+                name: "JUAREZ VERA MARTIN GUSTAVO",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE MANTENIMIENTO",
+                startDate: new Date(2021, 7, 4),
+                avatar: "https://ui-avatars.com/api/?name=Martin+Gustavo+Juarez+Vera&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 173,
+                name: "SANCHEZ GARCIA JORMAN ARTURO",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE MANTENIMIENTO",
+                startDate: new Date(2022, 6, 4),
+                avatar: "https://ui-avatars.com/api/?name=Jorman+Arturo+Sanchez+Garcia&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 174,
+                name: "SANTIAGO ALEJOS MARIA DE JESUS",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2022, 11, 19),
+                avatar: "https://ui-avatars.com/api/?name=Maria+De+Jesus+Santiago+Alejos&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 175,
+                name: "ROMERO ADALID NORMA ANGELICA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2023, 0, 26),
+                avatar: "https://ui-avatars.com/api/?name=Norma+Angelica+Romero+Adalid&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 176,
+                name: "FRANCISCO AYALA EVANGELINA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2023, 1, 7),
+                avatar: "https://ui-avatars.com/api/?name=Evangelina+Francisco+Ayala&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 177,
+                name: "RODRIGUEZ LOPEZ PATRICIA ELIZABETH",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2023, 5, 14),
+                avatar: "https://ui-avatars.com/api/?name=Patricia+Elizabeth+Rodriguez+Lopez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 178,
+                name: "CRUZ MIRANDA ANDRES",
+                department: "SERVICIOS GENERALES",
+                position: "CHOFER - AUXILIAR DE ALMACEN",
+                startDate: new Date(2023, 8, 4),
+                avatar: "https://ui-avatars.com/api/?name=Andres+Cruz+Miranda&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 179,
+                name: "AGUILAR OLIVEROS ISRAEL ALEJANDRO",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE MANTENIMIENTO",
+                startDate: new Date(2023, 8, 21),
+                avatar: "https://ui-avatars.com/api/?name=Israel+Alejandro+Aguilar+Oliveros&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 180,
+                name: "HERNANDEZ MARTINEZ SARA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2023, 10, 24),
+                avatar: "https://ui-avatars.com/api/?name=Sara+Hernandez+Martinez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 181,
+                name: "CARRILLO DIAZ DORA ALEJANDRA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2024, 6, 1),
+                avatar: "https://ui-avatars.com/api/?name=Dora+Alejandra+Carrillo+Diaz&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 182,
+                name: "CISNEROS HERNANDEZ ALMA DELIA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2024, 6, 2),
+                avatar: "https://ui-avatars.com/api/?name=Alma+Delia+Cisneros+Hernandez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 183,
+                name: "HERNANDEZ HERNANDEZ JUANA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2024, 11, 2),
+                avatar: "https://ui-avatars.com/api/?name=Juana+Hernandez+Hernandez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 184,
+                name: "MENDOZA RAMIREZ ROSA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2024, 11, 13),
+                avatar: "https://ui-avatars.com/api/?name=Rosa+Mendoza+Ramirez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 185,
+                name: "HERNANDEZ AGUIRRE FANY ANGELICA",
+                department: "SERVICIOS GENERALES",
+                position: "ASISTENTE Y GESTOR DE OBRAS",
+                startDate: new Date(2025, 2, 4),
+                avatar: "https://ui-avatars.com/api/?name=Fany+Angelica+Hernandez+Aguirre&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 186,
+                name: "DE LA CRUZ DE LA LUZ ANGELICA",
+                department: "SERVICIOS GENERALES",
+                position: "AUXILIAR DE INTENDENCIA",
+                startDate: new Date(2025, 2, 19),
+                avatar: "https://ui-avatars.com/api/?name=Angelica+De+La+Cruz+De+La+Luz&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 187,
+                name: "LINARES RESENDIZ LEONOR",
+                department: "SERVICIOS GENERALES",
+                position: "ASISTENTE",
+                startDate: new Date(2025, 5, 17),
+                avatar: "https://ui-avatars.com/api/?name=Leonor+Linares+Resendiz&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 188,
+                name: "ROBLES COSIO JOEL",
+                department: "SISTEMA BIBLIOTECARIO",
+                position: "JEFE",
+                startDate: new Date(2002, 4, 1),
+                avatar: "https://ui-avatars.com/api/?name=Joel+Robles+Cosio&background=D50032&color=fff&size=200",
+                joinStory: "Hola, soy Joel Robles Cosío, Jefe del Sistema Bibliotecario de la Universidad de Londres. Ingresé a la Universidad el 1 de agosto de 1997, en el departamento de fotocopias, turno matutino. Ocupé ese puesto durante un año, realizando las actividades propias del área. \n\nEn 1998 fui promovido al área de biblioteca, donde comencé brindando servicio a los usuarios. Ahí me fueron enseñando los procedimientos y actividades del departamento. En ese entonces, solo existían tres bibliotecas: San Luis Potosí, Querétaro y Luis Cabrera, donde yo apoyaba. Durante las tardes estudiaba la Licenciatura en Informática Administrativa en nuestra Universidad. \n\nCon el tiempo y la experiencia, fui capacitado en catalogación, etiquetado de libros y en la preparación de materiales para las supervisiones de la SEP, todo bajo la dirección de la Lic. Socorro Miranda, a quien agradezco profundamente todo el conocimiento que me transmitió. \n\nTras su salida, fui promovido al puesto de Supervisor de Bibliotecas, justo cuando comenzaron a abrirse nuevos campus, como Orizaba, Tabasco y Medellín. Se me encomendó la apertura de bibliotecas en cada nuevo plantel, bajo el liderazgo de Francisco Muciño. \n\nPor motivos personales, tuve que dejar la institución durante seis meses, pero afortunadamente me brindaron la oportunidad de reincorporarme al mismo puesto. \n\nPosteriormente, fui promovido a Jefe de Bibliotecas del turno matutino, y con la apertura de nuevos planteles como Insurgentes y Cuauhtémoc, continuamos con la labor de creación y administración de bibliotecas. \n\nMás adelante, se me asignó el cargo de Jefe General del Sistema Bibliotecario, coordinando además la compra de materiales para las supervisiones de la SEP, así como la apertura de nuevos planteles como Vértiz e Insurgentes, además de apoyar a las bibliotecas de los planteles de Ciudad Querétaro en todos sus procedimientos, capacitación de personal y supervisiones de la SEP. \n\nEn los primeros años, el servicio se brindaba con el apoyo de becarios. Con el tiempo, se incorporó personal administrativo bibliotecario, permitiendo ofrecer un servicio de mayor calidad. Todo esto fue posible gracias al respaldo y confianza de la Maestra Graciela Chávez, a quien agradezco profundamente, pues gracias a su liderazgo se consolidó la creación de nuestras bibliotecas. \n\nHoy tengo a mi cargo ocho bibliotecas. He cumplido 23 años de trabajo continuo y 27 años desde mi ingreso a la Universidad de Londres. \n\nGracias, Universidad de Londres, por tantos años, tantas experiencias, amistades y por el apoyo a mi desarrollo profesional. \n\n¡Felicidades por estos 45 años!",
+                photos: [
+                    "https://i.postimg.cc/9MjJWY3y/joel-robles-topaz-face-upscale-4x.png"
+                ]
+            },
+            {
+                id: 189,
+                name: "OCAMPO PEÑA OSCAR",
+                department: "SISTEMA BIBLIOTECARIO",
+                position: "SUPERVISOR",
+                startDate: new Date(2012, 0, 31),
+                avatar: "https://ui-avatars.com/api/?name=Oscar+Ocampo+Peña&background=0033A0&color=fff&size=200",
+                joinStory: "Mi primer foto en la UDL que compartí en mis redes hace trece años, plantel Luis Cabrera un lugar icónico donde iniciaba un nuevo camino, muy pronto descubrí una nueva familia, nuevos retos, nuevos amigos, hoy un campo fértil para el quehacer bibliotecario…¡¡¡¡ Gracias, gracias UDL¡¡¡¡¡",
+                photos: [
+                    "https://i.postimg.cc/05cbpRdF/generation-76f85515-f110-4af2-9a2f-a6cddfad4080.png"
+                ]
+            },
+            {
+                id: 190,
+                name: "ORNELAS VICTORINO DAVID ALAN",
+                department: "SISTEMA BIBLIOTECARIO",
+                position: "BIBLIOTECARIO",
+                startDate: new Date(2013, 4, 7),
+                avatar: "https://ui-avatars.com/api/?name=David+Alan+Ornelas+Victorino&background=D50032&color=fff&size=200",
+                joinStory: "Todo empezó cuando yo estudiaba en la UDL la carrera de diseño gráfico y por algunas cuestiones que pasaron tuve que buscar el ser becario y después de 4 meses por fin entré a la biblioteca y empezamos hacer trípticos, postales, papeletas para mejorar y promover más la biblioteca y mi jefe directo Joel Robles me contrata como administrativo y seguimos con ese sistema. Mi jefe me manda poco después de que el plantel al plantel de vertiz se inaugurara entonces yo estaba en el turno vespertino con un compañero y salíamos a las 10 pm y la escuela a esa hora era muy oscura entonces terminando mi turno saliendo de la biblioteca escuchamos en el patio que se cayó una lata pero nosotros buscamos con la mirada la lata pero no la veíamos y a los pocos segundos el ruido de la lata se escuchó cada vez más cerca y más fuerte como si nos persiguiera y mi compañero y yo corrimos gritando y asustados pero a la vez riéndonos de nervios pero sin voltear a ver ya tiempo después hubo unas letras que pusieron en esa parte del patio que se movían solas a pensar de eran muy pesadas y de supimos que si espantaban en esa parte del patio.",
+                photos: [
+                    "https://i.postimg.cc/FKJqN4G6/generation-c8a283ca-fdfb-4ebf-b00a-fe7dc9bd6eef.png"
+                ]
+            },
+            {
+                id: 191,
+                name: "IXTA AVILA JORGE",
+                department: "SOPORTE TECNICO",
+                position: "JEFE",
+                startDate: new Date(2007, 9, 9),
+                avatar: "https://ui-avatars.com/api/?name=Jorge+Ixta+Avila&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 192,
+                name: "PEÑAFLOR FLORES LUIS MANUEL",
+                department: "SOPORTE TECNICO",
+                position: "SOPORTE E INFRAESTRUCTURA",
+                startDate: new Date(2023, 1, 16),
+                avatar: "https://ui-avatars.com/api/?name=Luis+Manuel+Peñaflor+Flores&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 193,
+                name: "MONTOYA CERVANTES NORMA ANGELICA",
+                department: "TESORERIA",
+                position: "ASISTENTE",
+                startDate: new Date(2016, 9, 12),
+                avatar: "https://ui-avatars.com/api/?name=Norma+Angelica+Montoya+Cervantes&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 194,
+                name: "SAMPERIO VARGAS RAYMUNDO",
+                department: "TESORERIA",
+                position: "GERENTE",
+                startDate: new Date(2023, 5, 1),
+                avatar: "https://ui-avatars.com/api/?name=Raymundo+Samperio+Vargas&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 195,
+                name: "MATA MATEOS JAVIER",
+                department: "VIGILANCIA",
+                position: "SUPERVISOR",
+                startDate: new Date(2004, 8, 2),
+                avatar: "https://ui-avatars.com/api/?name=Javier+Mata+Mateos&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 196,
+                name: "SEGUNDO GUTIERREZ HECTOR",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2004, 8, 23),
+                avatar: "https://ui-avatars.com/api/?name=Hector+Segundo+Gutierrez&background=D50032&color=fff&size=200",
+                joinStory: "Inicios en la Universidad de Londres!,ahora ya con casi 21 años de formar parte de esta maravillosa familia!",
+                photos: [
+                    "https://i.postimg.cc/ZKF2Wt9Q/1000000135-topaz-face-denoise-upscale-4x.jpg"
+                ]
+            },
+            {
+                id: 197,
+                name: "VELAZQUEZ GONZALEZ JUAN JOSE",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2009, 7, 21),
+                avatar: "https://ui-avatars.com/api/?name=Juan+Jose+Velazquez+Gonzalez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 198,
+                name: "SALINAS ESTRADA JUAN",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2009, 11, 1),
+                avatar: "https://ui-avatars.com/api/?name=Juan+Salinas+Estrada&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 199,
+                name: "MANCILLA MIRANDA MARIA RAQUEL",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2010, 4, 20),
+                avatar: "https://ui-avatars.com/api/?name=Maria+Raquel+Mancilla+Miranda&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 200,
+                name: "RUIZ HERNANDEZ ANGELICA MARIA",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2010, 6, 5),
+                avatar: "https://ui-avatars.com/api/?name=Angelica+Maria+Ruiz+Hernandez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 201,
+                name: "TELLEZ SANCHEZ MIGUEL ANGEL",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2011, 6, 15),
+                avatar: "https://ui-avatars.com/api/?name=Miguel+Angel+Tellez+Sanchez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 202,
+                name: "ORTIZ VERTIZ JOSE ALBERTO",
+                department: "VIGILANCIA",
+                position: "JEFE",
+                startDate: new Date(2011, 7, 10),
+                avatar: "https://ui-avatars.com/api/?name=Jose+Alberto+Ortiz+Vertiz&background=D50032&color=fff&size=200",
+                joinStory: "En ese momento me sentía emocionado,  entusiasmado y motivado por la oportunidad de integrarme a esta gran familia Universidad de Londres",
+                photos: [
+                    "https://i.postimg.cc/0Q7mnMQf/generation-153f7138-990c-4372-8d1b-58abffcbb9b6.png"
+                ]
+            },
+            {
+                id: 203,
+                name: "MARTINEZ GOMEZ JAVIER",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2016, 7, 8),
+                avatar: "https://ui-avatars.com/api/?name=Javier+Martinez+Gomez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 204,
+                name: "JIMENEZ BELMONT DAVID ARMANDO",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2017, 5, 21),
+                avatar: "https://ui-avatars.com/api/?name=David+Armando+Jimenez+Belmont&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 205,
+                name: "PEREZ PAREDES MIGUEL",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2017, 6, 17),
+                avatar: "https://ui-avatars.com/api/?name=Miguel+Perez+Paredes&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 206,
+                name: "MORENO PAREDES HECTOR",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2018, 0, 26),
+                avatar: "https://ui-avatars.com/api/?name=Hector+Moreno+Paredes&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 207,
+                name: "CRUZ TORRES RAFAEL",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2018, 4, 3),
+                avatar: "https://ui-avatars.com/api/?name=Rafael+Cruz+Torres&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 208,
+                name: "DOMINGUEZ GALVEZ GERARDO",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2019, 4, 22),
+                avatar: "https://ui-avatars.com/api/?name=Gerardo+Dominguez+Galvez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 209,
+                name: "AVILES ZARAGOZA CARLOS",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2019, 6, 5),
+                avatar: "https://ui-avatars.com/api/?name=Carlos+Aviles+Zaragoza&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 210,
+                name: "CARRILLO LOPEZ LEOPOLDO",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2020, 2, 3),
+                avatar: "https://ui-avatars.com/api/?name=Leopoldo+Carrillo+Lopez&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 211,
+                name: "ZEPEDA GALAVIZ ERNESTO MAURICIO",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2021, 11, 6),
+                avatar: "https://ui-avatars.com/api/?name=Ernesto+Mauricio+Zepeda+Galaviz&background=0033A0&color=fff&size=200",
+                joinStory: "11 -12-2021\n\nTiempos de pandemia\n\nDías  difíciles\n\nRecuerdo que la rectora  regalo mil pesos para la cena de navidad 🎄 \n\nNunca lo voy a olvidar 🥰\n\nFeliz de pertenecer a UDL 🇬🇧",
+                photos: [
+                    "https://i.postimg.cc/SKTJqv72/1000284560.jpg"
+                ]
+            },
+            {
+                id: 212,
+                name: "SAAVEDRA RIVERA CARMEN",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2022, 3, 20),
+                avatar: "https://ui-avatars.com/api/?name=Carmen+Saavedra+Rivera&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 213,
+                name: "MEJIA MEJIA JESUS ISRAEL",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2022, 6, 11),
+                avatar: "https://ui-avatars.com/api/?name=Jesus+Israel+Mejia+Mejia&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 214,
+                name: "PEREZ ALLEC JORGE GERMAN",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2023, 6, 24),
+                avatar: "https://ui-avatars.com/api/?name=Jorge+German+Perez+Allec&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 215,
+                name: "SOLIS HERNANDEZ PATRICIA",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2024, 5, 26),
+                avatar: "https://ui-avatars.com/api/?name=Patricia+Solis+Hernandez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 216,
+                name: "HERNANDEZ RUIZ JAVIER",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2024, 6, 25),
+                avatar: "https://ui-avatars.com/api/?name=Javier+Hernandez+Ruiz&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 217,
+                name: "FLORES VARGAS ANDRES",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2024, 9, 23),
+                avatar: "https://ui-avatars.com/api/?name=Andres+Flores+Vargas&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 218,
+                name: "ROJAS OSVALDO MANUEL",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2024, 11, 4),
+                avatar: "https://ui-avatars.com/api/?name=Manuel+Rojas+Osvaldo&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 219,
+                name: "YTZA PAEZ JUAN PABLO",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2025, 3, 3),
+                avatar: "https://ui-avatars.com/api/?name=Juan+Pablo+Ytza+Paez&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 220,
+                name: "TEHUACACTL HURTADO LAURA",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2025, 4, 2),
+                avatar: "https://ui-avatars.com/api/?name=Laura+Tehuacactl+Hurtado&background=D50032&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 221,
+                name: "JIMENEZ RAMOS EDID KARINA",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2025, 5, 10),
+                avatar: "https://ui-avatars.com/api/?name=Edid+Karina+Jimenez+Ramos&background=0033A0&color=fff&size=200",
+                joinStory: null
+            },
+            {
+                id: 222,
+                name: "ROSARIO MARTINEZ JAIME",
+                department: "VIGILANCIA",
+                position: "VIGILANTE",
+                startDate: new Date(2025, 6, 15),
+                avatar: "https://ui-avatars.com/api/?name=Jaime+Rosario+Martinez&background=D50032&color=fff&size=200",
+                joinStory: null
+            }
+        ];
+
+        // Sort employees by start date
+        employees.sort((a, b) => a.startDate - b.startDate);
+
+        let filteredEmployees = [...employees];
+
+        function initializeFilters() {
+            const yearFilter = document.getElementById('yearFilter');
+            const departmentFilter = document.getElementById('departmentFilter');
+            
+            // Populate year filter
+            const years = [...new Set(employees.map(emp => emp.startDate.getFullYear()))].sort();
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                yearFilter.appendChild(option);
+            });
+            
+            // Populate department filter with unique departments from employees
+            const uniqueDepartments = [...new Set(employees.map(emp => emp.department))].sort();
+            uniqueDepartments.forEach(dept => {
+                const option = document.createElement('option');
+                option.value = dept;
+                option.textContent = dept;
+                departmentFilter.appendChild(option);
+            });
+        }
+
+        function renderTimeline() {
+            const container = document.getElementById('timelineContainer');
+            container.innerHTML = '';
+            
+            // Sort employees by date for vertical timeline
+            const sortedEmployees = [...filteredEmployees].sort((a, b) => a.startDate - b.startDate);
+            
+            let currentYear = null;
+            let currentMonth = null;
+            
+            sortedEmployees.forEach((emp, index) => {
+                const empYear = emp.startDate.getFullYear();
+                const empMonth = emp.startDate.getMonth();
+                const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
+                                  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+                
+                // Add year label if it's a new year
+                if (currentYear !== empYear) {
+                    const yearLabel = document.createElement('div');
+                    yearLabel.className = 'relative flex justify-center mb-6 mt-8';
+                    yearLabel.innerHTML = `
+                        <div style="background: #0033A0;" class="text-white px-6 py-3 rounded-full shadow-lg font-bold text-xl z-20 border-4 border-white">
+                            ${empYear}
+                        </div>
+                    `;
+                    container.appendChild(yearLabel);
+                    currentYear = empYear;
+                    currentMonth = null; // Reset month when year changes
+                }
+                
+                // Add month label if it's a new month
+                if (currentMonth !== empMonth) {
+                    const monthLabel = document.createElement('div');
+                    monthLabel.className = 'relative flex justify-center mb-4';
+                    monthLabel.innerHTML = `
+                        <div class="bg-white border-2 text-white px-4 py-2 rounded-full shadow-md font-semibold text-sm z-20" style="border-color: #D50032; background: #D50032;">
+                            ${monthNames[empMonth]}
+                        </div>
+                    `;
+                    container.appendChild(monthLabel);
+                    currentMonth = empMonth;
+                }
+                
+                const isLeft = index % 2 === 0;
+                const employeeItem = document.createElement('div');
+                employeeItem.className = `relative flex items-center mb-6 ${isLeft ? 'justify-start' : 'justify-end'}`;
+                
+                employeeItem.innerHTML = `
+                    <!-- Timeline dot -->
+                    <div class="absolute left-1/2 transform -translate-x-1/2 w-4 h-4 rounded-full border-4 border-white shadow-lg z-10 timeline-dot" style="background: #0033A0;"></div>
+                    
+                    <!-- Employee card -->
+                    <div class="employee-card bg-gray-50 rounded-xl p-4 border border-gray-200 hover:bg-gray-100 transition-all duration-300 cursor-pointer shadow-sm w-96 ${isLeft ? 'mr-auto pr-8' : 'ml-auto pl-8'}" onclick="openModal(${emp.id})">
+                        <div class="flex items-center space-x-3">
+                            <img src="${emp.avatar}" alt="${emp.name}" class="w-12 h-12 rounded-full">
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-gray-800 font-semibold truncate">${emp.name}</h3>
+                                <p class="text-gray-600 text-sm truncate">${emp.position}</p>
+                                <p class="text-gray-500 text-xs">${emp.department}</p>
+                                <p class="text-xs font-medium" style="color: #0033A0;">${emp.startDate.toLocaleDateString('es-ES')}</p>
+                            </div>
+                        </div>
+                        
+                        
+                        <div class="mt-3 flex items-center gap-4 text-sm select-none" aria-label="Reacciones">
+                          <button class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200"
+                                  onclick="event.stopPropagation(); react('likes', ${emp.id})">
+                            👍 <span id="likes-${emp.id}">0</span>
+                          </button>
+                          <button class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200"
+                                  onclick="event.stopPropagation(); react('loves', ${emp.id})">
+                            ❤️ <span id="loves-${emp.id}">0</span>
+                          </button>
+                          <button class="px-3 py-1 rounded-full bg-gray-100 hover:bg-gray-200"
+                                  onclick="event.stopPropagation(); react('wows', ${emp.id})">
+                            😮 <span id="wows-${emp.id}">0</span>
+                          </button>
+                        </div>
+
+<!-- Connection line -->
+                        <div class="absolute top-1/2 ${isLeft ? 'right-0 translate-x-full' : 'left-0 -translate-x-full'} w-8 h-px bg-gray-300"></div>
+                    </div>
+                `;
+                
+                container.appendChild(employeeItem);
+            });
+            
+            // Animate cards
+            setTimeout(() => {
+                document.querySelectorAll('.employee-card').forEach((card, index) => {
+                    setTimeout(() => {
+                        card.classList.add('show');
+                    }, index * 100);
+                });
+            }, 100);
+        }
+
+        function openModal(employeeId) {
+            const employee = employees.find(emp => emp.id === employeeId);
+            if (!employee) return;
+            
+            const modal = document.getElementById('employeeModal');
+            const modalContent = document.getElementById('modalContent');
+            
+            const now = new Date();
+            const startDate = employee.startDate;
+            
+            let years = now.getFullYear() - startDate.getFullYear();
+            let months = now.getMonth() - startDate.getMonth();
+            
+            if (months < 0) {
+                years--;
+                months += 12;
+            }
+            
+            let timeWorking = '';
+            if (years > 0 && months > 0) {
+                timeWorking = `${years} año${years !== 1 ? 's' : ''} y ${months} mes${months !== 1 ? 'es' : ''}`;
+            } else if (years > 0) {
+                timeWorking = `${years} año${years !== 1 ? 's' : ''}`;
+            } else if (months > 0) {
+                timeWorking = `${months} mes${months !== 1 ? 'es' : ''}`;
+            } else {
+                timeWorking = 'Menos de un mes';
+            }
+            
+            modalContent.innerHTML = `
+                <div class="relative">
+                    <button onclick="closeModal()" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold z-10">×</button>
+                    
+                    <!-- Header with photo -->
+                    <div class="p-8 text-white" style="background: linear-gradient(to right, #0033A0, #D50032);">
+                        <div class="flex items-center space-x-6">
+                            <img src="${employee.avatar}" alt="${employee.name}" class="w-24 h-24 rounded-full border-4 border-white shadow-lg">
+                            <div>
+                                <h2 class="text-3xl font-bold">${employee.name}</h2>
+                                <p class="text-xl opacity-90">${employee.position}</p>
+                                <p class="text-lg opacity-75">${employee.department}</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Content -->
+                    <div class="p-8">
+                        ${employee.joinStory ? `
+                        <div class="text-center mb-8">
+                            <h3 class="text-2xl font-bold text-gray-800 mb-4">🌟 Historia de Ingreso</h3>
+                            <div class="bg-blue-50 border-l-4 p-6 rounded-lg" style="border-color: #0033A0;">
+                                <div class="text-gray-700 text-lg leading-relaxed italic whitespace-pre-line">"${employee.joinStory}"</div>
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="bg-gray-50 p-6 rounded-lg">
+                                <h4 class="font-semibold text-gray-800 mb-3">📅 Fecha de Ingreso</h4>
+                                <p class="text-gray-600 text-lg">${employee.startDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                            </div>
+                            
+                            <div class="bg-gray-50 p-6 rounded-lg">
+                                <h4 class="font-semibold text-gray-800 mb-3">⏰ Tiempo en la Empresa</h4>
+                                <p class="text-gray-600 text-lg">${timeWorking} trabajando con nosotros</p>
+                            </div>
+                        </div>
+                        
+                        ${employee.joinStory ? `
+                        <!-- GALERÍA DE FOTOS -->
+                        <div class="mt-8 mb-6">
+                            <h4 class="text-xl font-bold text-gray-800 mb-4 text-center">📸 Galería de Fotos</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                ${employee.photos && employee.photos.length > 0 ? 
+                                    employee.photos.map((photo, index) => `
+                                        <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                                            <img src="${photo}" alt="Foto de ${employee.name} ${index + 1}" class="w-full h-32 object-cover cursor-pointer" onclick="openPhotoModal(this.src)">
+                                        </div>
+                                    `).join('') : `
+                                    <!-- Placeholder para empleados sin fotos -->
+                                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                                        <div class="text-gray-400 text-4xl mb-2">📷</div>
+                                        <p class="text-gray-500 text-sm">Agregar foto 1</p>
+                                    </div>
+                                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                                        <div class="text-gray-400 text-4xl mb-2">📷</div>
+                                        <p class="text-gray-500 text-sm">Agregar foto 2</p>
+                                    </div>
+                                    <div class="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                                        <div class="text-gray-400 text-4xl mb-2">📷</div>
+                                        <p class="text-gray-500 text-sm">Agregar foto 3</p>
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <div class="mt-8 text-center space-y-4">
+                            <div class="inline-flex items-center space-x-2 bg-green-100 text-green-800 px-4 py-2 rounded-full">
+                                <span>✨</span>
+                                <span class="font-medium">Miembro valioso del equipo ${employee.department}</span>
+                            </div>
+                            
+                            <div>
+                                <button onclick="closeModal()" class="text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200 inline-flex items-center space-x-2" style="background: #0033A0;" onmouseover="this.style.background='#002080'" onmouseout="this.style.background='#0033A0'">
+                                    <span>←</span>
+                                    <span>Regresar a la Línea de Tiempo</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('employeeModal');
+            modal.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        function openPhotoModal(imageSrc) {
+            // Create photo modal
+            const photoModal = document.createElement('div');
+            photoModal.className = 'fixed inset-0 flex items-center justify-center';
+            photoModal.style.zIndex = '9999';
+            photoModal.innerHTML = `
+                <div class="modal-backdrop absolute inset-0 bg-black/90" onclick="this.parentElement.remove()"></div>
+                <div class="relative max-w-5xl max-h-[95vh] p-4" style="z-index: 10000;">
+                    <button onclick="this.parentElement.parentElement.remove()" class="absolute -top-4 -right-4 text-white hover:text-gray-300 text-4xl font-bold bg-red-600 hover:bg-red-700 rounded-full w-12 h-12 flex items-center justify-center shadow-lg transition-colors duration-200" style="z-index: 10001;">×</button>
+                    <img src="${imageSrc}" alt="Foto ampliada" class="max-w-full max-h-full object-contain rounded-lg shadow-2xl border-4 border-white">
+                </div>
+            `;
+            document.body.appendChild(photoModal);
+        }
+
+        function filterEmployees() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const yearFilter = document.getElementById('yearFilter').value;
+            const departmentFilter = document.getElementById('departmentFilter').value;
+            
+            filteredEmployees = employees.filter(emp => {
+                const matchesSearch = emp.name.toLowerCase().includes(searchTerm) || 
+                                    emp.department.toLowerCase().includes(searchTerm) ||
+                                    emp.position.toLowerCase().includes(searchTerm);
+                const matchesYear = !yearFilter || emp.startDate.getFullYear().toString() === yearFilter;
+                const matchesDepartment = !departmentFilter || emp.department === departmentFilter;
+                
+                return matchesSearch && matchesYear && matchesDepartment;
+            });
+            
+            renderTimeline();
+        }
+
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', filterEmployees);
+        document.getElementById('yearFilter').addEventListener('change', filterEmployees);
+        document.getElementById('departmentFilter').addEventListener('change', filterEmployees);
+
+        // Close modal with Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeModal();
+            }
+        });
+
+        // Initialize
+        initializeFilters();
+        renderTimeline();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96b1b8ff876cc915',t:'MTc1NDUxNjc0MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+<script>
+const SHEETS_API = "https://script.google.com/macros/s/AKfycbyXVwdU8QJfe10-gUVhaGue4VaOq-AZh1-z-fSYBFTF6L1FdLktfDP5OShUkZW22Zy2/exec";
+
+async function cargarReacciones() {
+  try {
+    const res = await fetch(SHEETS_API + "?t=" + Date.now(), { cache: "no-store" });
+    const data = await res.json();
+    for (const id in data) {
+      ["likes", "loves", "wows"].forEach(tipo => {
+        const el = document.getElementById(`${tipo}-${id}`);
+        if (el && data[id] && typeof data[id][tipo] !== "undefined") {
+          el.textContent = data[id][tipo];
+        }
+      });
+    }
+  } catch (e) {
+    console.error("Error cargando reacciones:", e);
+  }
+}
+
+async function react(tipo, idTarjeta) {
+  // 🔒 Bloqueo por navegador: una reacción por tarjeta
+  const clave = `reaccion_${idTarjeta}`;
+  if (localStorage.getItem(clave)) {
+    alert("Ya reaccionaste a esta tarjeta.");
+    return;
+  }
+  localStorage.setItem(clave, tipo);
+
+  // 👇 De aquí en adelante, deja tu lógica EXACTA que ya funcionaba
+  const tipos = ["likes","loves","wows"];
+  const prev = {};
+  tipos.forEach(t => {
+    const el = document.getElementById(`${t}-${idTarjeta}`);
+    prev[t] = el ? Number(el.textContent || 0) : 0;
+  });
+
+  // UI optimista: sube en pantalla al instante
+  const elClick = document.getElementById(`${tipo}-${idTarjeta}`);
+  if (elClick) elClick.textContent = prev[tipo] + 1;
+
+  try {
+    const res = await fetch(SHEETS_API, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // como lo tenías
+      body: JSON.stringify({ tipo, idTarjeta })
+    });
+    const data = await res.json();
+
+    // Si tu Apps Script devuelve 'totals', reconciliamos exacto
+    if (data && data.totals) {
+      tipos.forEach(t => {
+        const el = document.getElementById(`${t}-${idTarjeta}`);
+        if (el && typeof data.totals[t] !== "undefined") el.textContent = data.totals[t];
+      });
+    } else {
+      // Si no devuelve totals, podrías relanzar cargarReacciones() aquí si quieres
+      // await cargarReacciones();
+    }
+  } catch (e) {
+    // Si falla, revertimos y quitamos el bloqueo para que puedan reintentar
+    localStorage.removeItem(clave);
+    tipos.forEach(t => {
+      const el = document.getElementById(`${t}-${idTarjeta}`);
+      if (el) el.textContent = prev[t];
+    });
+    console.error("No se pudo guardar la reacción:", e);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", cargarReacciones);
+</script>
+
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
