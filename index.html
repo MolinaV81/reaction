@@ -2493,6 +2493,12 @@
                 container.appendChild(employeeItem);
             });
             
+            // ⬇️ Re-pintar reacciones al terminar de renderizar
+            setTimeout(() => {
+                if (typeof cargarReacciones === 'function') cargarReacciones();
+                if (typeof aplicarBloqueosLocal === 'function') aplicarBloqueosLocal();
+            }, 0);
+
             // Animate cards
             setTimeout(() => {
                 document.querySelectorAll('.employee-card').forEach((card, index) => {
